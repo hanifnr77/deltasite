@@ -51,13 +51,17 @@ export interface TextBlock extends BaseBlock {
     underline?: boolean;
   };
   listType?: 'none' | 'bullet' | 'number';
+  // New Styles
+  fontSize?: 'sm' | 'base' | 'lg' | 'xl';
+  textColor?: string;
+  fontFamily?: 'sans' | 'serif' | 'mono';
 }
 
 export interface DividerBlock extends BaseBlock {
   type: 'divider';
   height: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showLine: boolean;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  lineStyle?: 'solid' | 'dashed' | 'dotted' | 'double' | 'wavy';
   lineOpacity?: number; // 10-100
 }
 
