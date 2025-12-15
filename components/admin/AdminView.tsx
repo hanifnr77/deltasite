@@ -15,7 +15,7 @@ import {
   Type, Minus, Link as LinkIcon, Grid as GridIcon,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline, List, ListOrdered,
-  ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2
+  ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2, GripVertical, ArrowDownToLine, ArrowUpToLine
 } from 'lucide-react';
 
 interface AdminViewProps {
@@ -37,6 +37,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  
+  // Smart Insert State
+  const [insertMode, setInsertMode] = useState<'top' | 'bottom'>('bottom');
+
+  // Drag and Drop State
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   
   // Toast & Modal Hook
   const { addToast } = useToast();
@@ -63,7 +69,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     } else if (type === 'text') {
       newBlock = {
         id, type: 'text', content: 'Tulis teks disini...', align: 'center',
-        format: { bold: false, italic: false, underline: false }, listType: 'none'
+        format: { bold: false, italic: false, underline: false }, listType: 'none',
+        fontSize: 'base', fontFamily: 'sans', textColor: ''
       } as TextBlock;
     } else if (type === 'image_grid') {
       newBlock = {
@@ -81,7 +88,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
         id, type: 'divider', height: 'md', showLine: true, lineStyle: 'solid'
        } as DividerBlock;
     }
-    onUpdateBlocks([...blocks, newBlock]);
+
+    let updatedBlocks = [...blocks];
+    if (insertMode === 'top') {
+        updatedBlocks.unshift(newBlock);
+    } else {
+        updatedBlocks.push(newBlock);
+    }
+    
+    onUpdateBlocks(updatedBlocks);
     addToast('Blok baru berhasil ditambahkan', 'success');
   };
 
@@ -106,6 +121,32 @@ export const AdminView: React.FC<AdminViewProps> = ({
       addToast('Media sosial berhasil dihapus', 'success');
     }
     setDeleteModal({ isOpen: false, id: null, type: 'block' });
+  };
+
+  // --- Drag and Drop Logic ---
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+    // Transparent ghost image if needed, but default is usually fine
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Necessary to allow dropping
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null) return;
+    if (draggedIndex === dropIndex) return;
+
+    const newBlocks = [...blocks];
+    const [draggedItem] = newBlocks.splice(draggedIndex, 1);
+    newBlocks.splice(dropIndex, 0, draggedItem);
+    
+    onUpdateBlocks(newBlocks);
+    setDraggedIndex(null);
   };
 
   const moveBlock = (index: number, direction: 'up' | 'down') => {
@@ -329,31 +370,63 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           <h2 className="text-2xl font-heading font-bold text-gray-800">Manajemen Konten</h2>
                           <p className="text-gray-500 text-sm">Atur susunan tombol, teks, dan galeri.</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            <Button onClick={() => addBlock('link')} size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200">
-                              <LinkIcon size={16} /> Link
-                            </Button>
-                            <Button onClick={() => addBlock('image_grid')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
-                              <GridIcon size={16} /> Galeri
-                            </Button>
-                            <Button onClick={() => addBlock('text')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
-                              <Type size={16} /> Teks
-                            </Button>
-                            <Button onClick={() => addBlock('divider')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
-                              <Minus size={16} /> Garis
-                            </Button>
-                            <Button onClick={() => addBlock('social_embed')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
-                              <Share2 size={16} /> Posisi Medsos
-                            </Button>
-                        </div>
+                      </div>
+
+                      {/* --- ADD BLOCK CONTROLS & INSERT POSITION --- */}
+                      <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-4 border-b border-gray-200 -mx-4 px-4 md:-mx-8 md:px-8 mb-6 shadow-sm">
+                         <div className="max-w-3xl mx-auto space-y-3">
+                            <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                                <span>Posisi Tambah:</span>
+                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-600 transition-colors">
+                                   <input type="radio" checked={insertMode === 'top'} onChange={() => setInsertMode('top')} className="text-emerald-600 focus:ring-emerald-500" />
+                                   <ArrowUpToLine size={14} /> Atas
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-600 transition-colors">
+                                   <input type="radio" checked={insertMode === 'bottom'} onChange={() => setInsertMode('bottom')} className="text-emerald-600 focus:ring-emerald-500" />
+                                   <ArrowDownToLine size={14} /> Bawah
+                                </label>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <Button onClick={() => addBlock('link')} size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200">
+                                  <LinkIcon size={16} /> Link
+                                </Button>
+                                <Button onClick={() => addBlock('image_grid')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
+                                  <GridIcon size={16} /> Galeri
+                                </Button>
+                                <Button onClick={() => addBlock('text')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
+                                  <Type size={16} /> Teks
+                                </Button>
+                                <Button onClick={() => addBlock('divider')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
+                                  <Minus size={16} /> Garis
+                                </Button>
+                                <Button onClick={() => addBlock('social_embed')} size="sm" className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
+                                  <Share2 size={16} /> Posisi Medsos
+                                </Button>
+                            </div>
+                         </div>
                       </div>
 
                       <div className="space-y-4">
                         {blocks.map((block, index) => (
-                          <div key={block.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative">
+                          <div 
+                            key={block.id} 
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, index)}
+                            className={`
+                              bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative
+                              ${draggedIndex === index ? 'opacity-40 border-dashed border-emerald-500' : ''}
+                            `}
+                          >
                             
-                            {/* Block Controls */}
+                            {/* Drag Handle & Controls */}
+                            <div className="absolute top-3 left-3 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 p-1">
+                               <GripVertical size={20} />
+                            </div>
+
                             <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
+                              {/* Legacy Sort Buttons (Fallback) */}
                               <div className="flex bg-gray-100 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity mr-2">
                                   <button onClick={() => moveBlock(index, 'up')} disabled={index===0} className="p-1 hover:bg-white rounded disabled:opacity-30"><ArrowUp size={14}/></button>
                                   <button onClick={() => moveBlock(index, 'down')} disabled={index===blocks.length-1} className="p-1 hover:bg-white rounded disabled:opacity-30"><ArrowDown size={14}/></button>
@@ -367,6 +440,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                               }`}>{block.type === 'image_grid' ? 'Galeri' : block.type === 'social_embed' ? 'Posisi Medsos' : block.type}</span>
                               <button onClick={() => confirmDeleteBlock(block.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
                             </div>
+
+                            {/* Content Padding for Drag Handle */}
+                            <div className="pl-6">
 
                             {/* Link Editor */}
                             {block.type === 'link' && (
@@ -448,18 +524,67 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                     onChange={(e) => updateBlock(block.id, { content: e.target.value })}
                                     placeholder="Tulis paragraf atau judul..."
                                 />
-                                <div className="flex flex-wrap gap-2 mt-2">
+                                <div className="flex flex-wrap gap-2 mt-3 items-center">
+                                    {/* Alignment */}
                                     <div className="flex bg-gray-50 border border-gray-200 rounded-lg p-1">
-                                        {['left', 'center', 'right'].map((align) => (
+                                        {['left', 'center', 'right', 'justify'].map((align) => (
                                             <button key={align} onClick={() => updateBlock(block.id, { align })} className={`p-1.5 rounded hover:bg-white ${ (block as TextBlock).align === align ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
-                                                {align === 'left' && <AlignLeft size={14}/>} {align === 'center' && <AlignCenter size={14}/>} {align === 'right' && <AlignRight size={14}/>}
+                                                {align === 'left' && <AlignLeft size={14}/>} 
+                                                {align === 'center' && <AlignCenter size={14}/>} 
+                                                {align === 'right' && <AlignRight size={14}/>}
+                                                {align === 'justify' && <AlignJustify size={14}/>}
                                             </button>
                                         ))}
                                     </div>
+                                    
+                                    {/* Formatting */}
                                     <div className="flex bg-gray-50 border border-gray-200 rounded-lg p-1">
                                         <button onClick={() => updateBlock(block.id, { format: { ...(block as TextBlock).format, bold: !(block as TextBlock).format.bold } })} className={`p-1.5 rounded hover:bg-white ${(block as TextBlock).format.bold ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}><Bold size={14}/></button>
                                         <button onClick={() => updateBlock(block.id, { format: { ...(block as TextBlock).format, italic: !(block as TextBlock).format.italic } })} className={`p-1.5 rounded hover:bg-white ${(block as TextBlock).format.italic ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}><Italic size={14}/></button>
                                         <button onClick={() => updateBlock(block.id, { format: { ...(block as TextBlock).format, underline: !(block as TextBlock).format.underline } })} className={`p-1.5 rounded hover:bg-white ${(block as TextBlock).format.underline ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}><Underline size={14}/></button>
+                                    </div>
+
+                                    {/* List Type */}
+                                    <div className="flex bg-gray-50 border border-gray-200 rounded-lg p-1">
+                                        <button onClick={() => updateBlock(block.id, { listType: 'none' })} className={`px-2 py-1.5 text-xs rounded hover:bg-white ${(block as TextBlock).listType === 'none' ? 'bg-white shadow text-blue-600 font-bold' : 'text-gray-500'}`}>Teks</button>
+                                        <button onClick={() => updateBlock(block.id, { listType: 'bullet' })} className={`p-1.5 rounded hover:bg-white ${(block as TextBlock).listType === 'bullet' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}><List size={14}/></button>
+                                        <button onClick={() => updateBlock(block.id, { listType: 'number' })} className={`p-1.5 rounded hover:bg-white ${(block as TextBlock).listType === 'number' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}><ListOrdered size={14}/></button>
+                                    </div>
+
+                                    <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
+                                    {/* Font Size */}
+                                    <select 
+                                      value={(block as TextBlock).fontSize || 'base'} 
+                                      onChange={(e) => updateBlock(block.id, { fontSize: e.target.value })}
+                                      className="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 outline-none"
+                                    >
+                                      <option value="sm">Kecil</option>
+                                      <option value="base">Normal</option>
+                                      <option value="lg">Besar</option>
+                                      <option value="xl">X-Besar</option>
+                                    </select>
+
+                                    {/* Font Family */}
+                                    <select 
+                                      value={(block as TextBlock).fontFamily || 'sans'} 
+                                      onChange={(e) => updateBlock(block.id, { fontFamily: e.target.value })}
+                                      className="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 outline-none"
+                                    >
+                                      <option value="sans">Sans</option>
+                                      <option value="serif">Serif</option>
+                                      <option value="mono">Mono</option>
+                                    </select>
+
+                                    {/* Text Color */}
+                                    <div className="w-8 h-8 rounded-lg border border-gray-200 overflow-hidden relative shadow-sm cursor-pointer ml-1">
+                                        <input 
+                                          type="color" 
+                                          value={(block as TextBlock).textColor || '#374151'} 
+                                          onChange={(e) => updateBlock(block.id, { textColor: e.target.value })} 
+                                          className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer" 
+                                          title="Warna Teks"
+                                        />
                                     </div>
                                 </div>
                               </div>
@@ -570,8 +695,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                           <option value="xs">Kecil</option><option value="sm">Sedang</option><option value="md">Normal</option><option value="lg">Besar</option><option value="xl">Sangat Besar</option>
                                       </select>
                                 </div>
+                                <div className="flex flex-col gap-1">
+                                      <label className="text-[10px] uppercase font-bold text-gray-500">Gaya Garis</label>
+                                      <select value={(block as DividerBlock).lineStyle || 'solid'} onChange={(e) => updateBlock(block.id, { lineStyle: e.target.value })} className="text-sm border border-gray-200 rounded p-1.5 bg-gray-50">
+                                          <option value="solid">Solid (Garis Lurus)</option>
+                                          <option value="dashed">Dashed (Putus-putus)</option>
+                                          <option value="dotted">Dotted (Titik-titik)</option>
+                                          <option value="double">Double (Ganda)</option>
+                                          <option value="wavy">Wavy (Gelombang)</option>
+                                      </select>
+                                </div>
                                 <div className="h-8 w-px bg-gray-200 hidden sm:block"></div>
-                                <label className="flex items-center gap-2 cursor-pointer">
+                                <label className="flex items-center gap-2 cursor-pointer mt-4 sm:mt-0">
                                     <input type="checkbox" checked={(block as DividerBlock).showLine} onChange={(e) => updateBlock(block.id, { showLine: e.target.checked })} className="rounded text-emerald-600" />
                                     <span className="text-sm font-medium text-gray-600">Tampilkan Garis</span>
                                 </label>
@@ -591,6 +726,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                               </div>
                             )}
 
+                            </div> {/* End Content Padding */}
                           </div>
                         ))}
                       </div>
