@@ -1,6 +1,6 @@
 import React from 'react';
-import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, UserProfile, SocialLinkItem } from '../../types';
-import { ExternalLink, CheckCircle } from 'lucide-react';
+import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, UserProfile, SocialLinkItem, YoutubeBlock, MapBlock } from '../../types';
+import { ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
 import { IconMapper } from '../ui/IconMapper';
 
 interface PublicViewProps {
@@ -24,6 +24,85 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   };
 
   const interactionClass = isPreview ? 'pointer-events-none' : 'cursor-pointer';
+
+  // --- Helper to convert YouTube URL to Embed URL (Robust Version) ---
+  const getYoutubeEmbedUrl = (urlStr: string) => {
+    if (!urlStr) return null;
+
+    let videoId = '';
+
+    try {
+      // 1. Handle if user pasted raw iframe code
+      if (urlStr.includes('<iframe')) {
+          const srcMatch = urlStr.match(/src="([^"]+)"/);
+          if (srcMatch && srcMatch[1]) {
+             // If it's already an embed URL, extract ID to reconstruct cleanly or just return it if complex
+             if (srcMatch[1].includes('/embed/')) {
+                const parts = srcMatch[1].split('/embed/');
+                const idPart = parts[1].split(/[?&"']/)[0];
+                videoId = idPart;
+             }
+          }
+      } 
+      else {
+        // 2. Ensure URL has protocol
+        let safeUrl = urlStr.trim();
+        if (!safeUrl.startsWith('http')) {
+           safeUrl = `https://${safeUrl}`;
+        }
+
+        const urlObj = new URL(safeUrl);
+
+        // Case A: youtu.be/ID (Short URL)
+        if (urlObj.hostname.includes('youtu.be')) {
+          videoId = urlObj.pathname.slice(1);
+        }
+        // Case B: youtube.com (Long URL)
+        else if (urlObj.hostname.includes('youtube.com')) {
+          // Standard Watch: /watch?v=ID
+          if (urlObj.searchParams.has('v')) {
+            videoId = urlObj.searchParams.get('v') || '';
+          }
+          // Embed: /embed/ID
+          else if (urlObj.pathname.includes('/embed/')) {
+            videoId = urlObj.pathname.split('/embed/')[1];
+          }
+          // Shorts: /shorts/ID
+          else if (urlObj.pathname.includes('/shorts/')) {
+            videoId = urlObj.pathname.split('/shorts/')[1];
+          }
+          // Live: /live/ID
+          else if (urlObj.pathname.includes('/live/')) {
+            videoId = urlObj.pathname.split('/live/')[1];
+          }
+        }
+      }
+    } catch (e) {
+       // Fallback for partial URLs or issues with URL constructor
+    }
+
+    // 3. Fallback Regex (Classic robust pattern) if URL parsing failed
+    if (!videoId) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = urlStr.match(regExp);
+      if (match && match[2].length >= 10 && match[2].length <= 12) {
+        videoId = match[2];
+      }
+    }
+
+    if (videoId) {
+        // Cleanup ID (remove any trailing params or slashes)
+        // e.g. "ID?t=123" -> "ID"
+        const cleanId = videoId.split('?')[0].split('&')[0].split('/')[0];
+        if (cleanId.length > 0) {
+           // Adding origin is crucial for some environments to prevent Error 153
+           const origin = typeof window !== 'undefined' ? window.location.origin : '';
+           return `https://www.youtube.com/embed/${cleanId}?origin=${origin}&rel=0`;
+        }
+    }
+
+    return null;
+  };
 
   const renderSocials = () => {
     if (activeSocials.length === 0) return null;
@@ -289,6 +368,60 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     );
   };
 
+  const renderYoutube = (block: YoutubeBlock) => {
+    if (!block.url) return null;
+    const embedUrl = getYoutubeEmbedUrl(block.url);
+    
+    // UI Handling for Invalid Link (e.g., Search results or Channel links)
+    if (!embedUrl) {
+      return (
+        <div className="w-full bg-red-500/10 backdrop-blur-sm p-4 rounded-xl border border-red-500/30 shadow-lg text-center space-y-2">
+           <div className="flex justify-center text-red-400 mb-1"><AlertCircle size={24} /></div>
+           <p className="text-xs font-bold text-red-200">Link YouTube Tidak Valid</p>
+           <p className="text-[10px] text-red-200/70">
+             Mohon masukkan link video spesifik (cth: https://youtu.be/XYZ...).<br/>
+             Link pencarian atau channel tidak didukung.
+           </p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="w-full bg-white/5 p-1 rounded-xl border border-white/10 shadow-lg">
+         <div className="aspect-video rounded-lg overflow-hidden bg-black/20 relative">
+            <iframe 
+              src={embedUrl} 
+              title={block.title || 'YouTube video player'} 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen 
+              className={`w-full h-full border-none ${interactionClass}`}
+              // Removed referrerPolicy="strict-origin-when-cross-origin" to fix Error 153 in some envs
+            />
+         </div>
+         {block.title && <p className="text-xs text-center text-slate-300 mt-2 font-medium px-2 pb-1">{block.title}</p>}
+      </div>
+    );
+  };
+
+  const renderMap = (block: MapBlock) => {
+    if (!block.embedUrl) return null;
+
+    return (
+      <div className="w-full bg-white/5 p-1 rounded-xl border border-white/10 shadow-lg">
+         <div className="h-64 rounded-lg overflow-hidden bg-gray-100 relative">
+            <iframe 
+              src={block.embedUrl} 
+              title={block.title || 'Google Maps'} 
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className={`w-full h-full border-none ${interactionClass}`}
+            />
+         </div>
+         {block.title && <p className="text-xs text-center text-slate-300 mt-2 font-medium px-2 pb-1">{block.title}</p>}
+      </div>
+    );
+  };
+
   return (
     <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 ${isPreview ? 'h-full min-h-full' : 'min-h-screen'}`}>
       
@@ -370,6 +503,8 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
                   {block.type === 'divider' && renderDivider(block as DividerBlock)}
                   {block.type === 'image_grid' && renderImageGrid(block as ImageGridBlock)}
                   {block.type === 'social_embed' && renderSocials()}
+                  {block.type === 'youtube' && renderYoutube(block as YoutubeBlock)}
+                  {block.type === 'map' && renderMap(block as MapBlock)}
                </div>
             );
           })}
