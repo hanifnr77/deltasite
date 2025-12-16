@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Lock, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -20,11 +19,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword 
     setLoading(true);
     setError(false);
 
-    // Validate against profile password or fallback to default
     const validPassword = expectedPassword || 'admin';
 
     setTimeout(() => {
-      if (password === validPassword || password === 'admin123' /* master key optional */) {
+      if (password === validPassword || password === 'admin123') {
         onLogin();
       } else {
         setError(true);
@@ -34,12 +32,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 relative overflow-hidden">
-       {/* Background Decor */}
-       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-200/20 blur-[80px]" />
-       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-teal-200/20 blur-[80px]" />
+    // Update: Uses the user-provided image link as background with cover size
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-cover bg-center bg-no-repeat"
+         style={{ backgroundImage: "url('https://iili.io/fCsOw8u.md.png')" }}>
+       
+       {/* Dark Overlay for better contrast */}
+       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-0" />
 
-      <div className="w-full max-w-md bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl rounded-3xl p-8 md:p-10 animate-fade-in relative z-10">
+      <div className="w-full max-w-md bg-white/90 backdrop-blur-xl border border-white/50 shadow-2xl rounded-3xl p-8 md:p-10 animate-fade-in relative z-10">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
             <Lock size={32} />
@@ -56,7 +56,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword 
                 placeholder="Kode Akses / Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="text-center tracking-widest font-bold py-3 pr-10 pl-10"
+                className="text-center tracking-widest font-bold py-3 pr-10 pl-10 border-gray-300 focus:border-emerald-500"
                 autoFocus
               />
               <button
@@ -78,7 +78,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword 
 
           <Button 
             type="submit" 
-            className="w-full py-4 text-lg shadow-emerald-500/20"
+            className="w-full py-4 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/30 border-none text-white"
             loading={loading}
           >
             Masuk Dashboard <ChevronRight size={20} />
