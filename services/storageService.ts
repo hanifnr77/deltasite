@@ -1,19 +1,55 @@
+
 import { Block, UserProfile, SocialLinkItem } from '../types';
 
 const BLOCKS_KEY = 'mtsn8_blocks';
 const PROFILE_KEY = 'mtsn8_profile';
 const SOCIALS_KEY = 'mtsn8_socials';
 
-// --- MASUKKAN LINK SAKTI ANDA DI SINI (Di dalam tanda kutip) ---
-const API_URL = 'https://script.google.com/macros/s/AKfycbxjqOgYHLS6_09KkycICNK0NHXVFifVn_IxlTa1sRapq2xOPgVe88QGdKn6AEn7fBHv/exec'; 
-
-// --- Default Data (Data bawaan jika database kosong) ---
+// --- Default Data ---
 const DEFAULT_BLOCKS: Block[] = [
-  { id: 'soc_pos_default', type: 'social_embed' },
-  { id: 'b0', type: 'text', content: 'Layanan Utama', align: 'center', format: { bold: true, italic: false, underline: false }, listType: 'none' },
-  { id: 'b1', type: 'link', title: 'Website Resmi Madrasah', url: 'https://mtsn8tulungagung.sch.id', active: true, clicks: 1250, displayMode: 'solid', customColor: '#059669' },
-  { id: 'd1', type: 'divider', height: 'md', showLine: true, lineStyle: 'dashed' },
-  { id: 'b4', type: 'link', title: 'E-Learning Madrasah', url: '#', active: true, clicks: 3400, displayMode: 'outline' },
+  {
+    id: 'soc_pos_default',
+    type: 'social_embed', // Defaultnya ditaruh di atas
+    audience: 'all'
+  },
+  {
+    id: 'b0',
+    type: 'text',
+    content: 'Layanan Utama',
+    align: 'center',
+    format: { bold: true, italic: false, underline: false },
+    listType: 'none',
+    audience: 'all'
+  },
+  { 
+    id: 'b1', 
+    type: 'link',
+    title: 'Website Resmi Madrasah', 
+    url: 'https://mtsn8tulungagung.sch.id', 
+    active: true, 
+    clicks: 1250,
+    displayMode: 'solid',
+    customColor: '#059669',
+    audience: 'all'
+  },
+  {
+    id: 'd1',
+    type: 'divider',
+    height: 'md',
+    showLine: true,
+    lineStyle: 'dashed',
+    audience: 'all'
+  },
+  { 
+    id: 'b4', 
+    type: 'link',
+    title: 'E-Learning Madrasah', 
+    url: '#', 
+    active: true, 
+    clicks: 3400,
+    displayMode: 'outline',
+    audience: 'all'
+  },
 ];
 
 const DEFAULT_SOCIALS: SocialLinkItem[] = [
@@ -30,30 +66,46 @@ const DEFAULT_PROFILE: UserProfile = {
   footerText: '© 2025 MTsN 8 Tulungagung. Part Of DeltaZone - Transformasi Digital Madrasah.'
 };
 
-// --- API Methods (Menggunakan FETCH standar) ---
+// --- GAS Helper Types ---
+declare const google: any;
+
+// Check if we are in Google Apps Script environment
+const isGasEnvironment = () => {
+  return typeof google !== 'undefined' && google.script && google.script.run;
+};
+
+// Helper to wrap google.script.run in a Promise
+const serverCall = (funcName: string, ...args: any[]): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if (!isGasEnvironment()) {
+      reject('Not in GAS environment');
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler((error: any) => reject(error))
+      [funcName](...args);
+  });
+};
+
+// --- API Methods ---
 
 export const fetchAllData = async (): Promise<{ blocks: Block[], profile: UserProfile, socials: SocialLinkItem[] }> => {
-  try {
-    // Kita coba ambil data dari Spreadsheet
-    console.log("Mengambil data dari server...");
-    const response = await fetch(API_URL);
-    const data = await response.json();
-
-    // Cek apakah data valid (ada blocks, profile, dll)
-    if (data && data.blocks) {
+  if (isGasEnvironment()) {
+    try {
+      const data = await serverCall('apiGetAllData');
+      // Jika data kosong (sheet baru), gunakan default
       return {
-        blocks: data.blocks,
+        blocks: data.blocks || DEFAULT_BLOCKS,
         profile: data.profile || DEFAULT_PROFILE,
         socials: data.socials || DEFAULT_SOCIALS
       };
-    } else {
-      // Jika data di spreadsheet masih kosong, gunakan default
-      console.log("Data server kosong, menggunakan default.");
+    } catch (e) {
+      console.error("GAS Load Error", e);
       return { blocks: DEFAULT_BLOCKS, profile: DEFAULT_PROFILE, socials: DEFAULT_SOCIALS };
     }
-  } catch (e) {
-    console.error("Gagal load dari server, menggunakan LocalStorage/Default:", e);
-    // Fallback ke penyimpanan browser jika internet mati
+  } else {
+    // LocalStorage Fallback (Development Mode)
     const b = localStorage.getItem(BLOCKS_KEY);
     const p = localStorage.getItem(PROFILE_KEY);
     const s = localStorage.getItem(SOCIALS_KEY);
@@ -66,50 +118,61 @@ export const fetchAllData = async (): Promise<{ blocks: Block[], profile: UserPr
 };
 
 export const saveAllData = async (blocks: Block[], profile: UserProfile, socials: SocialLinkItem[]) => {
-  // 1. Simpan ke LocalStorage dulu (biar cepat/antisipasi error)
-  localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks));
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-  localStorage.setItem(SOCIALS_KEY, JSON.stringify(socials));
-
-  // 2. Simpan ke Google Spreadsheet (Server)
-  try {
-    const payload = {
-      blocks: blocks,
-      profile: profile,
-      socials: socials
-    };
-
-    // Teknik khusus agar tidak kena blokir CORS (menggunakan text/plain)
-    await fetch(`${API_URL}?action=save`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
-    });
-    console.log("Berhasil tersimpan di Server/Spreadsheet!");
-  } catch (e) {
-    console.error("Gagal menyimpan ke server:", e);
-    alert("Data tersimpan di Browser, tapi gagal naik ke Server. Cek koneksi internet.");
+  if (isGasEnvironment()) {
+    await serverCall('apiSaveAllData', { blocks, profile, socials });
+  } else {
+    // LocalStorage Fallback
+    localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks));
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    localStorage.setItem(SOCIALS_KEY, JSON.stringify(socials));
   }
 };
 
 export const saveBlocks = async (blocks: Block[]) => {
-  // Fungsi parsial, kita simpan ke local saja biar ringan
-  localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks));
+  if (isGasEnvironment()) {
+    // GAS logic handled in App.tsx typically, but specific saves can be routed here
+  } else {
+    localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks));
+  }
 };
 
+/**
+ * Uploads an image to Google Drive via GAS Backend.
+ * Returns the public URL of the image.
+ */
 export const uploadImage = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      // Karena hosting gratisan & Spreadsheet terbatas, 
-      // kita ubah gambar jadi teks panjang (Base64)
-      // Ini cara paling mudah tanpa server storage khusus.
+    reader.onload = async () => {
       const dataUrl = reader.result as string;
-      resolve(dataUrl);
+
+      if (isGasEnvironment()) {
+        try {
+          // Extract Base64 data (remove "data:image/png;base64," prefix)
+          const base64Data = dataUrl.split(',')[1];
+          const fileName = file.name;
+          const mimeType = file.type;
+
+          // Panggil fungsi backend 'apiUploadImage'
+          const response = await serverCall('apiUploadImage', base64Data, mimeType, fileName);
+          
+          if (response && response.url) {
+            resolve(response.url);
+          } else {
+            reject("Gagal mendapatkan URL dari server.");
+          }
+        } catch (error) {
+          console.error("Upload Error:", error);
+          reject(error);
+        }
+      } else {
+        // Development Mode: Return Base64 directly
+        console.warn("Dev Mode: Menggunakan Base64 local, bukan Google Drive.");
+        // Simulate network delay
+        setTimeout(() => resolve(dataUrl), 1000);
+      }
     };
-    reader.onerror = reject;
+    reader.onerror = (error) => reject(error);
     reader.readAsDataURL(file);
   });
 };
