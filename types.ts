@@ -25,6 +25,8 @@ export type BlockType = 'link' | 'text' | 'divider' | 'image_grid' | 'social_emb
 export interface BaseBlock {
   id: string;
   type: BlockType;
+  // Audience Targeting for Role-Based Content
+  audience: 'all' | 'teacher' | 'student';
 }
 
 export interface LinkBlock extends BaseBlock {
