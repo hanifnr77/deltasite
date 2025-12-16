@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, ImageGridItem, UserProfile, SocialLinkItem, SocialPlatform } from '../../types';
+import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, ImageGridItem, UserProfile, SocialLinkItem, SocialPlatform, YoutubeBlock, MapBlock } from '../../types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { generateEnhancedTitle, suggestCategory } from '../../services/geminiService';
@@ -14,7 +14,8 @@ import {
   Type, Minus, Link as LinkIcon, Grid as GridIcon,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline, List, ListOrdered,
-  ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2, GripVertical, ArrowDownToLine, ArrowUpToLine
+  ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2, GripVertical, ArrowDownToLine, ArrowUpToLine,
+  Youtube, MapPin
 } from 'lucide-react';
 
 interface AdminViewProps {
@@ -56,7 +57,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   // --- Generic Block Logic ---
-  const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed') => {
+  const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map') => {
     let newBlock: Block;
     const id = Date.now().toString();
 
@@ -82,6 +83,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
       newBlock = {
         id, type: 'social_embed'
       };
+    } else if (type === 'youtube') {
+      newBlock = {
+        id, type: 'youtube', url: '', title: ''
+      } as YoutubeBlock;
+    } else if (type === 'map') {
+      newBlock = {
+        id, type: 'map', embedUrl: '', title: ''
+      } as MapBlock;
     } else {
        newBlock = {
         id, type: 'divider', height: 'md', showLine: true, lineStyle: 'solid'
@@ -121,6 +130,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
     setDeleteModal({ isOpen: false, id: null, type: 'block' });
   };
+
+  // --- Helper to extract Map Source if iframe is pasted ---
+  const handleMapUrlChange = (id: string, value: string) => {
+    let cleanUrl = value;
+    if (value.includes('<iframe')) {
+      const srcMatch = value.match(/src="([^"]+)"/);
+      if (srcMatch && srcMatch[1]) {
+        cleanUrl = srcMatch[1];
+        addToast('URL Embed berhasil diekstrak dari kode iframe', 'success');
+      }
+    }
+    updateBlock(id, { embedUrl: cleanUrl });
+  }
+
+  // --- Helper to standardize YouTube URL ---
+  const handleYoutubeUrlChange = (id: string, value: string) => {
+    updateBlock(id, { url: value });
+    // We update state directly, PublicView handles the formatting logic.
+  }
 
   // --- Drag and Drop Logic ---
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -414,6 +442,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 >
                                   <Share2 size={16} /> Posisi Medsos
                                 </Button>
+                                <Button 
+                                  onClick={() => addBlock('youtube')} 
+                                  size="sm" 
+                                  className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
+                                >
+                                  <Youtube size={16} /> YouTube
+                                </Button>
+                                <Button 
+                                  onClick={() => addBlock('map')} 
+                                  size="sm" 
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
+                                >
+                                  <MapPin size={16} /> Peta
+                                </Button>
                             </div>
                          </div>
                       </div>
@@ -445,8 +487,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                   block.type === 'text' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
                                   block.type === 'image_grid' ? 'bg-purple-50 text-purple-600 border-purple-100' :
                                   block.type === 'social_embed' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                                  block.type === 'youtube' ? 'bg-red-50 text-red-600 border-red-100' :
+                                  block.type === 'map' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
                                   'bg-gray-50 text-gray-600 border-gray-100'
-                              }`}>{block.type === 'image_grid' ? 'Galeri' : block.type === 'social_embed' ? 'Posisi Medsos' : block.type}</span>
+                              }`}>{block.type === 'image_grid' ? 'Galeri' : block.type === 'social_embed' ? 'Posisi Medsos' : block.type === 'youtube' ? 'YouTube' : block.type === 'map' ? 'Peta Google' : block.type}</span>
                               <button onClick={() => confirmDeleteBlock(block.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
                             </div>
 
@@ -618,6 +662,48 @@ export const AdminView: React.FC<AdminViewProps> = ({
                               </div>
                             )}
 
+                            {block.type === 'youtube' && (
+                              <div className="pr-10 md:pr-16 space-y-3">
+                                <Input 
+                                  value={(block as YoutubeBlock).url} 
+                                  onChange={(e) => handleYoutubeUrlChange(block.id, e.target.value)} 
+                                  placeholder="Link Video Spesifik (cth: https://youtu.be/...)"
+                                  label="Link YouTube (Bukan Link Pencarian)"
+                                  className="text-sm font-mono text-gray-500"
+                                />
+                                <Input 
+                                  value={(block as YoutubeBlock).title || ''} 
+                                  onChange={(e) => updateBlock(block.id, { title: e.target.value })} 
+                                  placeholder="Judul Video (Opsional)"
+                                />
+                              </div>
+                            )}
+
+                            {block.type === 'map' && (
+                              <div className="pr-10 md:pr-16 space-y-3">
+                                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800">
+                                   <p className="font-bold mb-1">Cara mengambil Embed Map:</p>
+                                   <ol className="list-decimal list-inside space-y-1">
+                                     <li>Buka Google Maps, cari lokasi.</li>
+                                     <li>Klik tombol "Bagikan" / "Share".</li>
+                                     <li>Pilih tab "Sematkan Peta" / "Embed a map".</li>
+                                     <li>Salin HTML-nya dan paste di bawah ini.</li>
+                                   </ol>
+                                </div>
+                                <textarea
+                                  value={(block as MapBlock).embedUrl}
+                                  onChange={(e) => handleMapUrlChange(block.id, e.target.value)}
+                                  placeholder='<iframe src="https://www.google.com/maps/embed?..." ...></iframe>'
+                                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-mono text-gray-500 min-h-[80px]"
+                                />
+                                <Input 
+                                  value={(block as MapBlock).title || ''} 
+                                  onChange={(e) => updateBlock(block.id, { title: e.target.value })} 
+                                  placeholder="Judul Lokasi (Opsional)"
+                                />
+                              </div>
+                            )}
+
                             {block.type === 'divider' && (
                               <div className="pr-10 md:pr-16 flex flex-wrap items-center gap-6 py-2">
                                 <div className="flex flex-col gap-1">
@@ -732,7 +818,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Eye size={14}/> Live Preview</h3>
                   <div className="relative w-[300px] h-[600px] bg-gray-900 rounded-[2.5rem] ring-4 ring-gray-200 shadow-2xl overflow-hidden select-none">
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-xl z-20"></div>
-                      <div className="w-full h-full bg-slate-50 overflow-y-auto scrollbar-hide">
+                      {/* FIX: Ensure container allows scrolling for the content inside */}
+                      <div className="w-full h-full bg-slate-50 overflow-y-auto scrollbar-hide rounded-[2rem]">
                          <PublicView blocks={blocks} profile={profile} socials={socials} isPreview={true} />
                       </div>
                   </div>
