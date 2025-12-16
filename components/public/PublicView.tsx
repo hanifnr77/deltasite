@@ -7,7 +7,7 @@ interface PublicViewProps {
   blocks: Block[];
   profile: UserProfile;
   socials: SocialLinkItem[];
-  isPreview?: boolean; // New prop for admin preview mode
+  isPreview?: boolean;
 }
 
 export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false }) => {
@@ -23,6 +23,8 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     }
   };
 
+  const interactionClass = isPreview ? 'pointer-events-none' : 'cursor-pointer';
+
   const renderSocials = () => {
     if (activeSocials.length === 0) return null;
     return (
@@ -34,8 +36,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleLinkClick}
-            // Updated social buttons to glow
-            className="p-3 bg-white/5 backdrop-blur-md rounded-full shadow-lg border border-white/10 text-[#00B7B5] hover:scale-110 hover:bg-[#00B7B5] hover:text-[#005461] hover:shadow-[0_0_15px_rgba(0,183,181,0.5)] transition-all duration-300"
+            className={`p-3 bg-white/5 backdrop-blur-md rounded-full shadow-lg border border-white/10 text-white hover:scale-110 hover:bg-[#00B7B5] hover:text-[#005461] hover:shadow-[0_0_15px_rgba(0,183,181,0.5)] transition-all duration-300 ${interactionClass}`}
           >
             <IconMapper platform={social.platform} size={22} />
           </a>
@@ -48,7 +49,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     const isImageMode = link.displayMode === 'image' && !!link.image;
     const hasCustomColor = !!link.customColor;
     
-    // Style container: If custom color, use it solid. If not, use Glassmorphism.
     const containerStyle: React.CSSProperties = hasCustomColor 
       ? { 
           backgroundColor: link.customColor,
@@ -65,21 +65,18 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         target="_blank"
         rel="noopener noreferrer"
         onClick={handleLinkClick}
-        className={`group block w-full transform transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
+        className={`group block w-full transform transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] ${interactionClass}`}
       >
         <div 
           className={`
             relative flex items-stretch rounded-2xl transition-all duration-300 overflow-hidden
             ${isGlass 
-                // Enhanced Glassmorphism with Glow Effect on Hover
                 ? 'bg-white/10 backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/15 hover:border-[#00B7B5]/50 hover:shadow-[0_0_20px_rgba(0,183,181,0.25)]' 
                 : 'shadow-md hover:shadow-xl'
             }
           `}
           style={containerStyle}
         >
-          
-          {/* --- LEFT: Image/Icon --- */}
           {isImageMode ? (
             <div className="w-24 shrink-0 relative overflow-hidden bg-white/5 border-r border-white/10">
                <img 
@@ -103,7 +100,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             </div>
           )}
 
-          {/* --- MIDDLE: Text --- */}
           <div className={`flex-1 flex flex-col justify-center min-w-0 py-3 ${isImageMode ? 'px-4' : 'px-4'}`}>
             <span className="font-heading font-bold text-sm md:text-base leading-tight text-white group-hover:text-[#00B7B5] transition-colors shadow-black/10 drop-shadow-sm">
               {link.title}
@@ -122,7 +118,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             )}
           </div>
           
-          {/* --- RIGHT: Arrow --- */}
           <div className="pr-4 py-4 flex items-center justify-center">
             <div className={`
               w-8 h-8 flex items-center justify-center rounded-full transition-all shrink-0
@@ -134,7 +129,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
               <ExternalLink size={14} />
             </div>
           </div>
-
         </div>
       </a>
     );
@@ -169,7 +163,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
       font-heading leading-relaxed
     `;
 
-    // Default to slate-200 for dark theme readability unless overridden
     const style: React.CSSProperties = block.textColor ? { color: block.textColor } : {};
     const wrapperClassName = `w-full px-4 py-3 rounded-xl bg-white/5 backdrop-blur-md border border-white/5 shadow-sm ${contentClass} ${!block.textColor ? 'text-slate-200' : ''}`;
 
@@ -283,7 +276,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={handleLinkClick}
-                className="block hover:opacity-90 transition-opacity"
+                className={`block hover:opacity-90 transition-opacity ${interactionClass}`}
               >
                 <Content />
               </a>
@@ -297,20 +290,31 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   };
 
   return (
-    // Updated container background to match app theme for seamless scroll
-    // FIXED: Changed min-h-screen to h-full when isPreview to prevent layout overflow in admin
-    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 ${isPreview ? 'h-full min-h-full pointer-events-none' : 'min-h-screen'}`}>
+    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 ${isPreview ? 'h-full min-h-full' : 'min-h-screen'}`}>
       
-      {/* Floating Particles Background (Aurora/Ocean Effect) */}
-      {/* FIXED: Changed fixed to absolute when isPreview so it doesn't escape the phone container */}
+      {/* --- BACKGROUND ORNAMENTS & SHAPES --- */}
       <div className={`${isPreview ? 'absolute' : 'fixed'} inset-0 z-0 overflow-hidden pointer-events-none`}>
-        {/* Particle 1: Deep Teal */}
-        <div className="absolute top-[-10%] left-[-20%] w-[80%] h-[80%] rounded-full bg-[#005461] opacity-40 blur-[120px] animate-float" />
-        {/* Particle 2: Bright Cyan (Accent) */}
-        <div className="absolute top-[40%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#00B7B5] opacity-20 blur-[100px] animate-float" style={{ animationDelay: '3s' }} />
-        {/* Particle 3: Medium Teal */}
-        <div className="absolute bottom-[-20%] left-[20%] w-[70%] h-[70%] rounded-full bg-[#018790] opacity-30 blur-[120px] animate-float" style={{ animationDelay: '5s' }} />
         
+        {/* Geometric Grid Overlay - Added for structure */}
+        <div className="absolute inset-0 opacity-10" 
+             style={{ 
+               backgroundImage: `linear-gradient(#00B7B5 1px, transparent 1px), linear-gradient(90deg, #00B7B5 1px, transparent 1px)`, 
+               backgroundSize: '40px 40px' 
+             }}>
+        </div>
+
+        {/* Shape 1: Large Glow Top Left (Updated color for visibility) */}
+        <div className="absolute top-[-15%] left-[-25%] w-[80%] h-[80%] rounded-full bg-emerald-500 opacity-20 blur-[100px] animate-float" />
+        
+        {/* Shape 2: Accent Glow Bottom Right (Updated color for visibility) */}
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-cyan-400 opacity-20 blur-[120px] animate-float" style={{ animationDelay: '3s' }} />
+        
+        {/* Shape 3: Geometric Circle Outline (New) */}
+        <div className="absolute top-[20%] right-[-5%] w-64 h-64 rounded-full border-2 border-white/5 opacity-30 animate-spin" style={{ animationDuration: '20s' }}></div>
+
+        {/* Shape 4: Floating Square (New) */}
+        <div className="absolute bottom-[30%] left-[5%] w-24 h-24 border border-white/10 rounded-2xl rotate-45 opacity-40 animate-float" style={{ animationDelay: '2s' }}></div>
+
         {/* Noise overlay for texture */}
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-15 mix-blend-overlay"></div>
       </div>
@@ -318,7 +322,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
       {/* Main Content */}
       <div className={`relative z-10 w-full max-w-lg flex flex-col items-center gap-6 pt-16 pb-12 px-6 ${isPreview ? 'pt-8 pb-8 scale-95 origin-top' : ''}`}>
         
-        {/* Profile Header (Glass Card) */}
+        {/* Profile Header */}
         <div className="flex flex-col items-center text-center gap-5 w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl animate-fade-in ring-1 ring-white/5">
           <div className="relative group">
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#00B7B5] to-[#018790] blur-xl opacity-40 group-hover:opacity-60 transition-duration-500 scale-110 animate-pulse"></div>
@@ -340,17 +344,17 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             
             <div className="inline-flex items-center gap-2 mt-2 px-5 py-2 rounded-full bg-[#005461]/30 border border-[#00B7B5]/30 shadow-sm backdrop-blur-md">
                <span className="w-2 h-2 rounded-full bg-[#00B7B5] animate-pulse shadow-[0_0_8px_#00B7B5]"></span>
-               <span className="text-xs font-bold text-[#00B7B5] tracking-wider uppercase">
+               <span className="text-xs font-bold text-white tracking-wider uppercase">
                  Berpacu dan Terus Maju
                </span>
             </div>
           </div>
         </div>
 
-        {/* Horizontal Social Links */}
+        {/* Social Links */}
         {!hasSocialEmbedBlock && activeSocials.length > 0 && renderSocials()}
 
-        {/* Blocks Container - With Staggered Animation */}
+        {/* Blocks */}
         <div className="w-full space-y-4 mt-2">
           {blocks.map((block, idx) => {
             if (block.type === 'link' && !(block as LinkBlock).active) return null;
@@ -380,8 +384,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         <footer className="mt-16 flex flex-col items-center gap-3 text-center opacity-0 animate-fade-in" style={{ animationDelay: '1s', animationFillMode: 'forwards' }}>
            <div className="w-16 h-1 bg-gradient-to-r from-[#005461] via-[#00B7B5] to-[#005461] rounded-full opacity-60"></div>
            <div className="space-y-1">
-             {/* FIX: Improved Contrast for Footer Text */}
-             <p className="text-xs font-semibold text-slate-300/90 tracking-wide">
+             <p className="text-xs font-semibold text-slate-200/90 tracking-wide">
                {profile.footerText || `© ${currentYear} MTsN 8 Tulungagung`}
              </p>
            </div>
