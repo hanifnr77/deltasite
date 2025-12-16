@@ -15,7 +15,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline, List, ListOrdered,
   ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2, GripVertical, ArrowDownToLine, ArrowUpToLine,
-  Youtube, MapPin, PanelLeft
+  Youtube, MapPin, PanelLeft, Users, GraduationCap, School
 } from 'lucide-react';
 
 interface AdminViewProps {
@@ -65,39 +65,45 @@ export const AdminView: React.FC<AdminViewProps> = ({
     let newBlock: Block;
     const id = Date.now().toString();
 
+    // Default Audience is 'all'
+    const defaultAudience = 'all';
+
     if (type === 'link') {
       newBlock = {
-        id, type: 'link', title: 'Tombol Baru', subtitle: '', url: 'https://', active: true,
+        id, type: 'link', audience: defaultAudience, 
+        title: 'Tombol Baru', subtitle: '', url: 'https://', active: true,
         clicks: 0, category: 'Umum', displayMode: 'solid'
       } as LinkBlock;
     } else if (type === 'text') {
       newBlock = {
-        id, type: 'text', content: 'Tulis teks disini...', align: 'center',
+        id, type: 'text', audience: defaultAudience,
+        content: 'Tulis teks disini...', align: 'center',
         format: { bold: false, italic: false, underline: false }, listType: 'none',
         fontSize: 'base', fontFamily: 'sans', textColor: ''
       } as TextBlock;
     } else if (type === 'image_grid') {
       newBlock = {
-        id, type: 'image_grid', columns: 2, aspectRatio: 'square', gap: 'md', items: [
+        id, type: 'image_grid', audience: defaultAudience,
+        columns: 2, aspectRatio: 'square', gap: 'md', items: [
           { id: `img_${Date.now()}`, url: 'https://placehold.co/400x400/png' },
           { id: `img_${Date.now()+1}`, url: 'https://placehold.co/400x400/059669/white.png' }
         ]
       } as ImageGridBlock;
     } else if (type === 'social_embed') {
       newBlock = {
-        id, type: 'social_embed'
+        id, type: 'social_embed', audience: defaultAudience
       };
     } else if (type === 'youtube') {
       newBlock = {
-        id, type: 'youtube', url: '', title: ''
+        id, type: 'youtube', audience: defaultAudience, url: '', title: ''
       } as YoutubeBlock;
     } else if (type === 'map') {
       newBlock = {
-        id, type: 'map', embedUrl: '', title: ''
+        id, type: 'map', audience: defaultAudience, embedUrl: '', title: ''
       } as MapBlock;
     } else {
        newBlock = {
-        id, type: 'divider', height: 'md', showLine: true, lineStyle: 'solid'
+        id, type: 'divider', audience: defaultAudience, height: 'md', showLine: true, lineStyle: 'solid'
        } as DividerBlock;
     }
 
@@ -518,6 +524,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                   <button onClick={() => moveBlock(index, 'up')} disabled={index===0} className="p-1 hover:bg-white rounded disabled:opacity-30"><ArrowUp size={14}/></button>
                                   <button onClick={() => moveBlock(index, 'down')} disabled={index===blocks.length-1} className="p-1 hover:bg-white rounded disabled:opacity-30"><ArrowDown size={14}/></button>
                               </div>
+
+                              {/* AUDIENCE BADGES IN HEADER */}
+                              {block.audience === 'teacher' && <span className="text-[10px] uppercase font-bold px-2 py-1 rounded border mr-2 bg-yellow-50 text-yellow-600 border-yellow-100 flex items-center gap-1"><School size={10} /> Guru</span>}
+                              {block.audience === 'student' && <span className="text-[10px] uppercase font-bold px-2 py-1 rounded border mr-2 bg-blue-50 text-blue-600 border-blue-100 flex items-center gap-1"><GraduationCap size={10} /> Siswa</span>}
+                              {block.audience === 'all' && <span className="text-[10px] uppercase font-bold px-2 py-1 rounded border mr-2 bg-gray-50 text-gray-600 border-gray-100 flex items-center gap-1"><Users size={10} /> Semua</span>}
+                              
                               <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded border mr-2 select-none ${
                                   block.type === 'link' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
                                   block.type === 'text' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
@@ -530,7 +542,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
                               <button onClick={() => confirmDeleteBlock(block.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
                             </div>
 
-                            <div className="pl-6">
+                            <div className="pl-6 pt-8">
+                               {/* AUDIENCE SELECTOR - GLOBAL FOR ALL BLOCKS */}
+                               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Users size={12} /> Target Audience:</span>
+                                   <div className="flex flex-wrap items-center gap-4">
+                                       <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+                                          <input type="radio" checked={block.audience === 'all' || !block.audience} onChange={() => updateBlock(block.id, { audience: 'all' })} className="w-4 h-4 text-emerald-600 focus:ring-emerald-600 border-gray-300" />
+                                          <span className={`text-xs font-bold ${block.audience === 'all' || !block.audience ? 'text-gray-900' : 'text-gray-500'}`}>Semua</span>
+                                       </label>
+                                       <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+                                          <input type="radio" checked={block.audience === 'teacher'} onChange={() => updateBlock(block.id, { audience: 'teacher' })} className="w-4 h-4 text-yellow-500 focus:ring-yellow-500 border-gray-300" />
+                                          <span className={`text-xs font-bold ${block.audience === 'teacher' ? 'text-yellow-700' : 'text-gray-500'}`}>Guru</span>
+                                       </label>
+                                       <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+                                          <input type="radio" checked={block.audience === 'student'} onChange={() => updateBlock(block.id, { audience: 'student' })} className="w-4 h-4 text-blue-600 focus:ring-blue-600 border-gray-300" />
+                                          <span className={`text-xs font-bold ${block.audience === 'student' ? 'text-blue-700' : 'text-gray-500'}`}>Siswa</span>
+                                       </label>
+                                   </div>
+                               </div>
+
                             {block.type === 'link' && (
                               <div className="flex flex-col sm:flex-row gap-4 pr-10 md:pr-16">
                                 <div className="w-full sm:w-20 h-20 rounded-lg bg-gray-100 shrink-0 border border-gray-200 overflow-hidden flex items-center justify-center relative group/img">
