@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, ImageGridItem, UserProfile, SocialLinkItem, SocialPlatform } from '../../types';
 import { Button } from '../ui/Button';
@@ -365,12 +364,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                          <div className="max-w-3xl mx-auto space-y-3">
                             <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-wide">
                                 <span>Posisi Tambah:</span>
-                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#018790] transition-colors">
-                                   <input type="radio" checked={insertMode === 'top'} onChange={() => setInsertMode('top')} className="text-[#018790] focus:ring-[#018790]" />
+                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
+                                   <input type="radio" checked={insertMode === 'top'} onChange={() => setInsertMode('top')} className="text-[#059669] focus:ring-[#059669]" />
                                    <ArrowUpToLine size={14} /> Atas
                                 </label>
-                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#018790] transition-colors">
-                                   <input type="radio" checked={insertMode === 'bottom'} onChange={() => setInsertMode('bottom')} className="text-[#018790] focus:ring-[#018790]" />
+                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
+                                   <input type="radio" checked={insertMode === 'bottom'} onChange={() => setInsertMode('bottom')} className="text-[#059669] focus:ring-[#059669]" />
                                    <ArrowDownToLine size={14} /> Bawah
                                 </label>
                             </div>
@@ -378,35 +377,40 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <Button 
                                   onClick={() => addBlock('link')} 
                                   size="sm" 
-                                  className="bg-[#00B7B5] hover:bg-[#018790] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
+                                  // Updated to Emerald (Green) for Primary "Link" Action - High Contrast
+                                  className="bg-[#059669] hover:bg-[#047857] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <LinkIcon size={16} /> Link
                                 </Button>
                                 <Button 
                                   onClick={() => addBlock('image_grid')} 
                                   size="sm" 
-                                  className="bg-[#018790] hover:bg-[#005461] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
+                                  // Updated to Teal (Blue-Green)
+                                  className="bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <GridIcon size={16} /> Galeri
                                 </Button>
                                 <Button 
                                   onClick={() => addBlock('text')} 
                                   size="sm" 
-                                  className="bg-[#018790] hover:bg-[#005461] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
+                                  // Updated to Teal
+                                  className="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <Type size={16} /> Teks
                                 </Button>
                                 <Button 
                                   onClick={() => addBlock('divider')} 
                                   size="sm" 
-                                  className="bg-[#018790] hover:bg-[#005461] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
+                                  // Updated to Dark Teal
+                                  className="bg-[#115e59] hover:bg-[#134e4a] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <Minus size={16} /> Garis
                                 </Button>
                                 <Button 
                                   onClick={() => addBlock('social_embed')} 
                                   size="sm" 
-                                  className="bg-[#005461] hover:bg-[#00404a] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
+                                  // Updated to Brand Darkest
+                                  className="bg-[#005461] hover:bg-[#003d47] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <Share2 size={16} /> Posisi Medsos
                                 </Button>
@@ -740,4 +744,3 @@ export const AdminView: React.FC<AdminViewProps> = ({
     </div>
   );
 };
-
