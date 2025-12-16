@@ -15,7 +15,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline, List, ListOrdered,
   ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2, GripVertical, ArrowDownToLine, ArrowUpToLine,
-  Youtube, MapPin
+  Youtube, MapPin, PanelLeft
 } from 'lucide-react';
 
 interface AdminViewProps {
@@ -37,6 +37,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  
+  // Focus Mode State
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [showPreview, setShowPreview] = useState(true);
   
   // Smart Insert State
   const [insertMode, setInsertMode] = useState<'top' | 'bottom'>('bottom');
@@ -336,48 +340,53 @@ export const AdminView: React.FC<AdminViewProps> = ({
       </div>
 
       <aside className={`
-        fixed md:relative z-30 h-full w-64 flex flex-col transition-transform duration-300 shrink-0
+        fixed md:relative z-30 h-full flex flex-col shrink-0
         bg-gradient-to-b from-[#005461] via-[#018790] to-[#005461]
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        transition-all duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
+        ${showSidebar ? 'md:w-64' : 'md:w-0 overflow-hidden'}
       `}>
-         <div className="h-20 flex items-center gap-3 px-6 border-b border-white/10">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white shadow-lg backdrop-blur-sm">
-               <LayoutDashboard size={20} />
-            </div>
-            <div>
-               <h1 className="font-heading font-bold text-white text-lg leading-tight">Admin</h1>
-               <p className="text-[10px] text-white/60 font-medium uppercase tracking-wider">MTsN 8 Tulungagung</p>
-            </div>
-         </div>
+        {/* Inner Wrapper to maintain width during collapse animation */}
+        <div className="w-64 flex flex-col h-full">
+           <div className="h-20 flex items-center gap-3 px-6 border-b border-white/10">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white shadow-lg backdrop-blur-sm">
+                 <LayoutDashboard size={20} />
+              </div>
+              <div>
+                 <h1 className="font-heading font-bold text-white text-lg leading-tight">Admin</h1>
+                 <p className="text-[10px] text-white/60 font-medium uppercase tracking-wider">MTsN 8 Tulungagung</p>
+              </div>
+           </div>
 
-         <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            <div className="text-xs font-bold text-white/50 uppercase px-2 mb-2">Menu Utama</div>
-            <SidebarItem id="blocks" label="Konten & Link" icon={LinkIcon} />
-            <SidebarItem id="socials" label="Media Sosial" icon={Share2} />
-            <SidebarItem id="profile" label="Profil & Pengaturan" icon={Settings} />
-         </div>
+           <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+              <div className="text-xs font-bold text-white/50 uppercase px-2 mb-2">Menu Utama</div>
+              <SidebarItem id="blocks" label="Konten & Link" icon={LinkIcon} />
+              <SidebarItem id="socials" label="Media Sosial" icon={Share2} />
+              <SidebarItem id="profile" label="Profil & Pengaturan" icon={Settings} />
+           </div>
 
-         <div className="p-4 border-t border-white/10 bg-black/10">
-            <div className="flex items-center gap-3 mb-4 px-2">
-               <img src={profile.avatarUrl} alt="Profile" className="w-8 h-8 rounded-full bg-white border border-gray-200 object-cover" />
-               <div className="flex-1 overflow-hidden">
-                  <p className="text-sm font-bold text-white truncate">{profile.name}</p>
-                  <p className="text-xs text-white/60 truncate">Administrator</p>
-               </div>
-            </div>
-            <button 
-               onClick={onLogout} 
-               className="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-all shadow-sm"
-            >
-               <LogOut size={16} /> Keluar
-            </button>
-         </div>
+           <div className="p-4 border-t border-white/10 bg-black/10">
+              <div className="flex items-center gap-3 mb-4 px-2">
+                 <img src={profile.avatarUrl} alt="Profile" className="w-8 h-8 rounded-full bg-white border border-gray-200 object-cover" />
+                 <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-bold text-white truncate">{profile.name}</p>
+                    <p className="text-xs text-white/60 truncate">Administrator</p>
+                 </div>
+              </div>
+              <button 
+                 onClick={onLogout} 
+                 className="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-all shadow-sm"
+              >
+                 <LogOut size={16} /> Keluar
+              </button>
+           </div>
+        </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative transition-all duration-300">
          <div className="flex flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-32 scrollbar-thin scrollbar-thumb-gray-300 pt-20 md:pt-8">
-               <div className="max-w-3xl mx-auto animate-fade-in">
+               <div className="max-w-5xl mx-auto animate-fade-in">
                   
                   {activeTab === 'blocks' && (
                     <div className="space-y-6">
@@ -388,24 +397,55 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-4 border-b border-gray-200 -mx-4 px-4 md:-mx-8 md:px-8 mb-6 shadow-sm">
-                         <div className="max-w-3xl mx-auto space-y-3">
-                            <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-wide">
-                                <span>Posisi Tambah:</span>
-                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
-                                   <input type="radio" checked={insertMode === 'top'} onChange={() => setInsertMode('top')} className="text-[#059669] focus:ring-[#059669]" />
-                                   <ArrowUpToLine size={14} /> Atas
-                                </label>
-                                <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
-                                   <input type="radio" checked={insertMode === 'bottom'} onChange={() => setInsertMode('bottom')} className="text-[#059669] focus:ring-[#059669]" />
-                                   <ArrowDownToLine size={14} /> Bawah
-                                </label>
+                      <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-4 border-b border-gray-200 -mx-4 px-4 md:-mx-8 md:px-8 mb-6 shadow-sm transition-all duration-300">
+                         <div className="max-w-5xl mx-auto space-y-4">
+                            
+                            {/* Toolbar: Toggles & Insert Position */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  {/* Sidebar Toggle */}
+                                  <button 
+                                    onClick={() => setShowSidebar(!showSidebar)}
+                                    className={`p-2 rounded-lg transition-colors ${!showSidebar ? 'bg-emerald-100 text-emerald-700' : 'text-gray-400 hover:text-emerald-600 hover:bg-gray-100'}`}
+                                    title="Toggle Sidebar"
+                                  >
+                                    <PanelLeft size={20} />
+                                  </button>
+
+                                  <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
+
+                                  {/* Insert Position Radios */}
+                                  <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                                    <span className="hidden sm:inline">Posisi Tambah:</span>
+                                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
+                                       <input type="radio" checked={insertMode === 'top'} onChange={() => setInsertMode('top')} className="text-[#059669] focus:ring-[#059669]" />
+                                       <ArrowUpToLine size={14} /> <span className="hidden sm:inline">Atas</span>
+                                    </label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
+                                       <input type="radio" checked={insertMode === 'bottom'} onChange={() => setInsertMode('bottom')} className="text-[#059669] focus:ring-[#059669]" />
+                                       <ArrowDownToLine size={14} /> <span className="hidden sm:inline">Bawah</span>
+                                    </label>
+                                  </div>
+                                </div>
+
+                                {/* Preview Toggle (Desktop Only) */}
+                                <div className="hidden xl:block">
+                                   <button 
+                                      onClick={() => setShowPreview(!showPreview)}
+                                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${!showPreview ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-emerald-600 hover:bg-gray-100'}`}
+                                      title={showPreview ? "Sembunyikan Preview" : "Tampilkan Preview"}
+                                   >
+                                      {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      <span>{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
+                                   </button>
+                                </div>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+
+                            {/* Block Type Buttons */}
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
                                 <Button 
                                   onClick={() => addBlock('link')} 
                                   size="sm" 
-                                  // Updated to Emerald (Green) for Primary "Link" Action - High Contrast
                                   className="bg-[#059669] hover:bg-[#047857] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <LinkIcon size={16} /> Link
@@ -413,7 +453,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <Button 
                                   onClick={() => addBlock('image_grid')} 
                                   size="sm" 
-                                  // Updated to Teal (Blue-Green)
                                   className="bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <GridIcon size={16} /> Galeri
@@ -421,7 +460,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <Button 
                                   onClick={() => addBlock('text')} 
                                   size="sm" 
-                                  // Updated to Teal
                                   className="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <Type size={16} /> Teks
@@ -429,7 +467,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <Button 
                                   onClick={() => addBlock('divider')} 
                                   size="sm" 
-                                  // Updated to Dark Teal
                                   className="bg-[#115e59] hover:bg-[#134e4a] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <Minus size={16} /> Garis
@@ -437,7 +474,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <Button 
                                   onClick={() => addBlock('social_embed')} 
                                   size="sm" 
-                                  // Updated to Brand Darkest
                                   className="bg-[#005461] hover:bg-[#003d47] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
                                 >
                                   <Share2 size={16} /> Posisi Medsos
@@ -813,12 +849,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   )}
                </div>
             </div>
-            <div className="hidden xl:flex w-[380px] bg-gray-100/50 border-l border-gray-200 p-6 relative shrink-0 flex-col items-center">
-               <div className="sticky top-6 flex flex-col items-center w-full">
+            <div className={`
+                hidden xl:flex bg-gray-100/50 border-l border-gray-200 relative shrink-0 flex-col items-center
+                transition-all duration-300 ease-in-out
+                ${showPreview ? 'w-[380px] p-6' : 'w-0 p-0 overflow-hidden border-none'}
+            `}>
+               {/* Inner Wrapper for fixed width content during animation */}
+               <div className="w-[330px] flex flex-col items-center h-full sticky top-6">
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Eye size={14}/> Live Preview</h3>
                   <div className="relative w-[300px] h-[600px] bg-gray-900 rounded-[2.5rem] ring-4 ring-gray-200 shadow-2xl overflow-hidden select-none">
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-xl z-20"></div>
-                      {/* FIX: Ensure container allows scrolling for the content inside */}
                       <div className="w-full h-full bg-slate-50 overflow-y-auto scrollbar-hide rounded-[2rem]">
                          <PublicView blocks={blocks} profile={profile} socials={socials} isPreview={true} />
                       </div>
