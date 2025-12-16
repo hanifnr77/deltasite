@@ -20,7 +20,7 @@ export interface UserProfile {
 
 // --- Block System ---
 
-export type BlockType = 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed';
+export type BlockType = 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map';
 
 export interface BaseBlock {
   id: string;
@@ -85,4 +85,16 @@ export interface SocialEmbedBlock extends BaseBlock {
   // Tidak butuh properti lain, karena data diambil dari global state 'socials'
 }
 
-export type Block = LinkBlock | TextBlock | DividerBlock | ImageGridBlock | SocialEmbedBlock;
+export interface YoutubeBlock extends BaseBlock {
+  type: 'youtube';
+  url: string;
+  title?: string;
+}
+
+export interface MapBlock extends BaseBlock {
+  type: 'map';
+  embedUrl: string;
+  title?: string;
+}
+
+export type Block = LinkBlock | TextBlock | DividerBlock | ImageGridBlock | SocialEmbedBlock | YoutubeBlock | MapBlock;
