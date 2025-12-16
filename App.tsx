@@ -91,17 +91,21 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Logic to determine what to show based on view state and auth
+  // --- VIEW MODE LOGIC ---
+  const isPublic = view === 'public';
+  const isLoginView = view === 'admin' && !isAuthenticated;
+  const isAdminDashboard = view === 'admin' && isAuthenticated;
+
   const renderContent = () => {
-    if (view === 'public') {
+    if (isPublic) {
       return <PublicView blocks={blocks} profile={profile} socials={socials} />;
     }
 
-    if (!isAuthenticated) {
+    if (isLoginView) {
       return <LoginView onLogin={() => { setIsAuthenticated(true); addToast("Selamat datang Admin!", "success"); }} expectedPassword={profile.adminPassword} />;
     }
 
-    // Admin View
+    // Admin Dashboard
     return (
       <AdminView 
         blocks={blocks} 
@@ -115,24 +119,31 @@ const AppContent: React.FC = () => {
     );
   };
 
-  // Determine if we are in the authenticated dashboard to apply strict solid background
-  const isAdminDashboard = view === 'admin' && isAuthenticated;
+  // Determine container classes
+  let containerClasses = "min-h-screen font-sans transition-all duration-500 ease-in-out ";
+  
+  if (isAdminDashboard) {
+    // Clean Gray for Admin
+    containerClasses += "bg-gray-50 text-slate-900";
+  } else if (isLoginView) {
+    // Transparent for Login (LoginView handles background)
+    containerClasses += "bg-transparent text-slate-100";
+  } else {
+    // Default Public
+    containerClasses += "bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 selection:bg-[#00B7B5]/40 selection:text-white";
+  }
 
   return (
-    <div className={
-      isAdminDashboard 
-        ? "min-h-screen font-sans bg-gray-50 text-slate-900" 
-        : "min-h-screen font-sans bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 selection:bg-[#00B7B5]/40 selection:text-white"
-    }>
+    <div className={containerClasses}>
       
-      {/* View Switcher */}
+      {/* View Switcher Button */}
       {(!isAuthenticated || view === 'public') && (
         <div className="fixed top-4 right-4 z-50">
           <button 
             onClick={() => setView(view === 'public' ? 'admin' : 'public')}
             className={`
               flex items-center gap-2 px-4 py-2 backdrop-blur-lg border rounded-full transition-all shadow-lg 
-              ${view === 'admin' && isAuthenticated 
+              ${isAdminDashboard 
                 ? 'bg-[#00B7B5] text-white border-[#00B7B5] shadow-[#00B7B5]/40' 
                 : 'bg-white/10 text-slate-100 border-white/20 hover:border-[#00B7B5] hover:text-[#00B7B5] hover:bg-white/20'
               }
@@ -161,7 +172,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Main Content Area */}
-      <main className="w-full h-full">
+      <main className="w-full h-full relative z-10">
         {renderContent()}
       </main>
 
