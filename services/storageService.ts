@@ -1,55 +1,40 @@
-
 import { Block, UserProfile, SocialLinkItem } from '../types';
+
+// --- KONFIGURASI URL ---
+// Ini adalah alamat "Jembatan" ke Google Spreadsheet Bapak
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxjqOgYHLS6_09KkycICNK0NHXVFifVn_IxlTa1sRapq2xOPgVe88QGdKn6AEn7fBHv/exec';
 
 const BLOCKS_KEY = 'mtsn8_blocks';
 const PROFILE_KEY = 'mtsn8_profile';
 const SOCIALS_KEY = 'mtsn8_socials';
 
-// --- Default Data ---
+// --- DATA DEFAULT (Cadangan jika database kosong/error) ---
 const DEFAULT_BLOCKS: Block[] = [
   {
     id: 'soc_pos_default',
-    type: 'social_embed', // Defaultnya ditaruh di atas
+    type: 'social_embed',
     audience: 'all'
   },
   {
     id: 'b0',
     type: 'text',
-    content: 'Layanan Utama',
+    content: 'Selamat datang di New Deltasite MTsN 8 Tulungagung.',
     align: 'center',
-    format: { bold: true, italic: false, underline: false },
+    format: { bold: false, italic: false, underline: false },
     listType: 'none',
     audience: 'all'
   },
   { 
     id: 'b1', 
-    type: 'link',
+    type: 'link', 
     title: 'Website Resmi Madrasah', 
     url: 'https://mtsn8tulungagung.sch.id', 
     active: true, 
-    clicks: 1250,
-    displayMode: 'solid',
+    clicks: 0, 
+    displayMode: 'solid', 
     customColor: '#059669',
     audience: 'all'
-  },
-  {
-    id: 'd1',
-    type: 'divider',
-    height: 'md',
-    showLine: true,
-    lineStyle: 'dashed',
-    audience: 'all'
-  },
-  { 
-    id: 'b4', 
-    type: 'link',
-    title: 'E-Learning Madrasah', 
-    url: '#', 
-    active: true, 
-    clicks: 3400,
-    displayMode: 'outline',
-    audience: 'all'
-  },
+  }
 ];
 
 const DEFAULT_SOCIALS: SocialLinkItem[] = [
@@ -63,49 +48,40 @@ const DEFAULT_PROFILE: UserProfile = {
   avatarUrl: 'https://iili.io/f2LWiwG.png',
   themeColor: 'green',
   adminPassword: 'admin',
-  footerText: '© 2025 MTsN 8 Tulungagung. Part Of DeltaZone - Transformasi Digital Madrasah.'
+  footerText: '© 2025 MTsN 8 Tulungagung. Part Of DeltaZone'
 };
 
-// --- GAS Helper Types ---
-declare const google: any;
+// --- API METHODS ---
 
-// Check if we are in Google Apps Script environment
-const isGasEnvironment = () => {
-  return typeof google !== 'undefined' && google.script && google.script.run;
-};
-
-// Helper to wrap google.script.run in a Promise
-const serverCall = (funcName: string, ...args: any[]): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    if (!isGasEnvironment()) {
-      reject('Not in GAS environment');
-      return;
-    }
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler((error: any) => reject(error))
-      [funcName](...args);
-  });
-};
-
-// --- API Methods ---
-
+// 1. AMBIL DATA (READ)
 export const fetchAllData = async (): Promise<{ blocks: Block[], profile: UserProfile, socials: SocialLinkItem[] }> => {
-  if (isGasEnvironment()) {
-    try {
-      const data = await serverCall('apiGetAllData');
-      // Jika data kosong (sheet baru), gunakan default
+  try {
+    console.log("Mengambil data dari Spreadsheet...");
+    const response = await fetch(SCRIPT_URL);
+    
+    if (!response.ok) {
+      throw new Error('Gagal menghubungi server GAS');
+    }
+
+    const data = await response.json();
+    
+    // Validasi data yang masuk
+    if (data && data.blocks) {
+      console.log("Data berhasil dimuat!", data);
       return {
-        blocks: data.blocks || DEFAULT_BLOCKS,
+        blocks: data.blocks,
         profile: data.profile || DEFAULT_PROFILE,
         socials: data.socials || DEFAULT_SOCIALS
       };
-    } catch (e) {
-      console.error("GAS Load Error", e);
+    } else {
+      console.warn("Data kosong, menggunakan default.");
       return { blocks: DEFAULT_BLOCKS, profile: DEFAULT_PROFILE, socials: DEFAULT_SOCIALS };
     }
-  } else {
-    // LocalStorage Fallback (Development Mode)
+
+  } catch (error) {
+    console.error("Gagal mengambil data, menggunakan LocalStorage/Default sebagai fallback:", error);
+    
+    // Fallback ke LocalStorage jika internet mati / server error
     const b = localStorage.getItem(BLOCKS_KEY);
     const p = localStorage.getItem(PROFILE_KEY);
     const s = localStorage.getItem(SOCIALS_KEY);
@@ -117,61 +93,74 @@ export const fetchAllData = async (): Promise<{ blocks: Block[], profile: UserPr
   }
 };
 
+// 2. SIMPAN DATA (WRITE)
 export const saveAllData = async (blocks: Block[], profile: UserProfile, socials: SocialLinkItem[]) => {
-  if (isGasEnvironment()) {
-    await serverCall('apiSaveAllData', { blocks, profile, socials });
-  } else {
-    // LocalStorage Fallback
-    localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks));
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-    localStorage.setItem(SOCIALS_KEY, JSON.stringify(socials));
+  // Simpan ke LocalStorage dulu (Optimistic UI - biar user merasa cepat)
+  localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks));
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  localStorage.setItem(SOCIALS_KEY, JSON.stringify(socials));
+
+  try {
+    console.log("Menyimpan ke Spreadsheet...");
+    
+    // Kirim data menggunakan POST Request
+    // Gunakan 'no-cors' jika mengalami masalah CORS, tapi idealnya standard POST
+    // Kita gunakan trik text/plain agar tidak kena preflight options
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'save',
+        data: { blocks, profile, socials }
+      })
+    });
+
+    const result = await response.json();
+    console.log("Simpan Berhasil:", result);
+
+  } catch (error) {
+    console.error("Gagal menyimpan ke Cloud (Data tersimpan di LocalStorage):", error);
+    // Kita tidak throw error agar aplikasi tidak crash, karena data sudah aman di LocalStorage
   }
 };
 
-export const saveBlocks = async (blocks: Block[]) => {
-  if (isGasEnvironment()) {
-    // GAS logic handled in App.tsx typically, but specific saves can be routed here
-  } else {
-    localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks));
-  }
-};
-
-/**
- * Uploads an image to Google Drive via GAS Backend.
- * Returns the public URL of the image.
- */
+// 3. UPLOAD GAMBAR
 export const uploadImage = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    
     reader.onload = async () => {
-      const dataUrl = reader.result as string;
+      try {
+        const dataUrl = reader.result as string;
+        // Ambil Base64 murni (buang prefix "data:image/...")
+        const base64Data = dataUrl.split(',')[1];
 
-      if (isGasEnvironment()) {
-        try {
-          // Extract Base64 data (remove "data:image/png;base64," prefix)
-          const base64Data = dataUrl.split(',')[1];
-          const fileName = file.name;
-          const mimeType = file.type;
+        console.log("Mengupload gambar...");
+        
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'upload',
+            file: base64Data,
+            mimeType: file.type,
+            fileName: file.name
+          })
+        });
 
-          // Panggil fungsi backend 'apiUploadImage'
-          const response = await serverCall('apiUploadImage', base64Data, mimeType, fileName);
-          
-          if (response && response.url) {
-            resolve(response.url);
-          } else {
-            reject("Gagal mendapatkan URL dari server.");
-          }
-        } catch (error) {
-          console.error("Upload Error:", error);
-          reject(error);
+        const result = await response.json();
+        
+        if (result && result.url) {
+          console.log("Upload Sukses:", result.url);
+          resolve(result.url);
+        } else {
+          reject("Gagal mendapatkan URL gambar.");
         }
-      } else {
-        // Development Mode: Return Base64 directly
-        console.warn("Dev Mode: Menggunakan Base64 local, bukan Google Drive.");
-        // Simulate network delay
-        setTimeout(() => resolve(dataUrl), 1000);
+
+      } catch (error) {
+        console.error("Upload Error:", error);
+        reject(error);
       }
     };
+
     reader.onerror = (error) => reject(error);
     reader.readAsDataURL(file);
   });
