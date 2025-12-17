@@ -15,7 +15,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [serverPassword, setServerPassword] = useState<string>('admin123'); 
+  const [serverPassword, setServerPassword] = useState<string>(''); 
 
   useEffect(() => {
     const initAuth = async () => {
@@ -26,12 +26,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         const settings = await fetchSettings();
+        // Cek apakah server benar-benar mengembalikan password
         if (settings && settings.admin_password) {
           setServerPassword(settings.admin_password);
           console.log("Keamanan: Password server aktif.");
+        } else {
+           console.warn("Keamanan: Server tidak merespon password, akses admin mungkin terkunci.");
         }
       } catch (err) {
-        console.error("Gagal load password, pakai default.", err);
+        console.error("Gagal load password.", err);
       } finally {
         setLoading(false);
       }
