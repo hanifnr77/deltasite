@@ -6,11 +6,15 @@ import { AdminView } from './components/admin/AdminView';
 import { LoginView } from './components/admin/LoginView';
 import { Settings, ExternalLink } from 'lucide-react';
 import { ToastProvider, useToast } from './components/ui/Toast';
+// 👇 IMPORT BARU: Ambil AuthProvider dan useAuth
+import { AuthProvider, useAuth } from './context/AuthContext'; 
 
-// Internal component to use toast context logic
+// Internal component yang menggunakan Logic Auth
 const AppContent: React.FC = () => {
   const [view, setView] = useState<'public' | 'admin'>('public');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // 👇 UPDATE: Gunakan useAuth() menggantikan useState(false) manual
+  const { isAuthenticated, logout } = useAuth(); 
   const { addToast } = useToast();
   
   // Data State
@@ -74,7 +78,7 @@ const AppContent: React.FC = () => {
   }
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
+    logout(); // 👇 Panggil fungsi logout dari Context
     setView('public');
     addToast("Berhasil keluar", "info");
   }
@@ -102,7 +106,9 @@ const AppContent: React.FC = () => {
     }
 
     if (isLoginView) {
-      return <LoginView onLogin={() => { setIsAuthenticated(true); addToast("Selamat datang Admin!", "success"); }} expectedPassword={profile.adminPassword} />;
+      // 👇 UPDATE: LoginView sekarang menangani logic sendiri via Context
+      // Kita tidak perlu lagi mengoper 'expectedPassword' atau 'onLogin' manual
+      return <LoginView />;
     }
 
     // Admin Dashboard
@@ -123,13 +129,10 @@ const AppContent: React.FC = () => {
   let containerClasses = "min-h-screen font-sans transition-all duration-500 ease-in-out ";
   
   if (isAdminDashboard) {
-    // Clean Gray for Admin
     containerClasses += "bg-gray-50 text-slate-900";
   } else if (isLoginView) {
-    // Transparent for Login (LoginView handles background)
     containerClasses += "bg-transparent text-slate-100";
   } else {
-    // Default Public
     containerClasses += "bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 selection:bg-[#00B7B5]/40 selection:text-white";
   }
 
@@ -183,7 +186,10 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ToastProvider>
-      <AppContent />
+      {/* 👇 PENTING: AuthProvider membungkus seluruh aplikasi */}
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ToastProvider>
   );
 }
