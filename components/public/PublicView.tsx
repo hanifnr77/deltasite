@@ -12,7 +12,7 @@ interface PublicViewProps {
 
 export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'student'>('all');
-  
+   
   // Prayer Times State
   const [prayerTimes, setPrayerTimes] = useState<any>(null);
   const [nextPrayer, setNextPrayer] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
 
   const activeSocials = socials.filter(s => s.active && s.url);
   const currentYear = new Date().getFullYear();
-  
+   
   // Backward Compatibility:
   const hasSocialEmbedBlock = blocks.some(b => b.type === 'social_embed');
 
@@ -28,7 +28,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   useEffect(() => {
     const fetchPrayerTimes = async () => {
       try {
-        // Hardcoded to Tulungagung, Indonesia, Method 20 (Kemenag usually aligns closely or generic standard)
         const response = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Tulungagung&country=Indonesia&method=20');
         const data = await response.json();
         if (data && data.data && data.data.timings) {
@@ -51,7 +50,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
 
     const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
     
-    // Find the first prayer time that is greater than current time
     for (const prayer of prayers) {
       const timeStr = timings[prayer];
       if (timeStr) {
@@ -64,7 +62,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         }
       }
     }
-    // If all passed, next is Fajr (tomorrow)
     setNextPrayer('Fajr');
   };
 
@@ -76,18 +73,29 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
 
   const interactionClass = isPreview ? 'pointer-events-none' : 'cursor-pointer';
 
-  // --- Filter Logic ---
+  // --- Filter Logic (PERBAIKAN DI SINI) ---
   const filteredBlocks = blocks.filter(block => {
+    // 1. Cek Link Aktif
     if (block.type === 'link' && !(block as LinkBlock).active) return false;
+    
+    // 2. Cek Audience
     const blockAudience = block.audience || 'all';
 
-    if (activeTab === 'all') return blockAudience === 'all';
-    if (activeTab === 'teacher') return blockAudience === 'all' || blockAudience === 'teacher';
-    if (activeTab === 'student') return blockAudience === 'all' || blockAudience === 'student';
-    return true;
+    // Logika STRICT (Eksklusif)
+    if (activeTab === 'all') {
+        return blockAudience === 'all';
+    }
+    if (activeTab === 'teacher') {
+        return blockAudience === 'teacher'; // HANYA Guru
+    }
+    if (activeTab === 'student') {
+        return blockAudience === 'student'; // HANYA Siswa
+    }
+    
+    return false;
   });
 
-  // --- Helper to convert YouTube URL to Embed URL (Robust Version) ---
+  // --- Helper to convert YouTube URL to Embed URL ---
   const getYoutubeEmbedUrl = (urlStr: string) => {
     if (!urlStr) return null;
     let videoId = '';
