@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, ImageGridItem, UserProfile, SocialLinkItem, SocialPlatform, YoutubeBlock, MapBlock } from '../../types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { uploadImage } from '../../services/storageService'; 
+// 👇 UPDATE 1: Import saveSetting untuk keamanan password
+import { uploadImage, saveSetting } from '../../services/storageService'; 
 import { IconMapper } from '../ui/IconMapper';
 import { PublicView } from '../public/PublicView';
 import { useToast } from '../ui/Toast'; 
@@ -32,7 +33,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
   blocks, profile, socials, 
   onUpdateBlocks, onUpdateProfile, onUpdateSocials, onLogout 
 }) => {
-  // --- Updated Active Tab State to include 'dashboard' ---
   const [activeTab, setActiveTab] = useState<'dashboard' | 'blocks' | 'socials' | 'profile'>('dashboard');
   
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
@@ -61,6 +61,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+  // 👇 UPDATE 2: State loading khusus untuk simpan password
+  const [isSavingPassword, setIsSavingPassword] = useState(false); 
 
   // --- Dashboard Calculations ---
   const linkBlocks = blocks.filter(b => b.type === 'link') as LinkBlock[];
@@ -73,8 +75,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map') => {
     let newBlock: Block;
     const id = Date.now().toString();
-
-    // Default Audience is 'all'
     const defaultAudience = 'all';
 
     if (type === 'link') {
@@ -150,7 +150,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setDeleteModal({ isOpen: false, id: null, type: 'block' });
   };
 
-  // --- Helper to extract Map Source if iframe is pasted ---
   const handleMapUrlChange = (id: string, value: string) => {
     let cleanUrl = value;
     if (value.includes('<iframe')) {
@@ -163,10 +162,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     updateBlock(id, { embedUrl: cleanUrl });
   }
 
-  // --- Helper to standardize YouTube URL ---
   const handleYoutubeUrlChange = (id: string, value: string) => {
     updateBlock(id, { url: value });
-    // We update state directly, PublicView handles the formatting logic.
   }
 
   // --- Drag and Drop Logic ---
@@ -294,8 +291,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     onUpdateSocials(socials.map(s => s.id === id ? { ...s, ...updates } : s));
   };
 
-  // --- Password Logic ---
-  const handleUpdatePassword = () => {
+  // --- Password Logic (UPDATED SECURE) ---
+  const handleUpdatePassword = async () => {
     setPasswordError('');
     if (newPassword.length < 6) {
       setPasswordError('Password minimal 6 karakter.');
@@ -305,10 +302,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
       setPasswordError('Konfirmasi password tidak cocok.');
       return;
     }
-    onUpdateProfile({ ...profile, adminPassword: newPassword });
-    setNewPassword('');
-    setConfirmPassword('');
-    addToast('Password admin berhasil diperbarui!', 'success');
+
+    // 👇 UPDATE 3: Gunakan saveSetting untuk update ke Sheet Settings
+    setIsSavingPassword(true);
+    try {
+      await saveSetting('admin_password', newPassword);
+      
+      setNewPassword('');
+      setConfirmPassword('');
+      addToast('Password admin berhasil diperbarui ke Sistem Aman!', 'success');
+    } catch (err) {
+      console.error("Gagal simpan password:", err);
+      addToast('Gagal menyimpan password. Periksa koneksi internet.', 'error');
+    } finally {
+      setIsSavingPassword(false);
+    }
   };
 
   const handleSaveProfile = () => {
@@ -332,7 +340,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
   );
 
   return (
-    // FIX: Main container has strict opaque background
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden relative">
       <Modal 
         isOpen={deleteModal.isOpen} 
@@ -344,6 +351,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         confirmLabel="Ya, Hapus"
       />
 
+      {/* MOBILE MENU HEADER */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-gradient-to-r from-[#005461] to-[#018790] border-b border-white/10 z-40 flex items-center justify-between px-4 text-white">
         <div className="flex items-center gap-2">
            <div className="w-8 h-8 rounded bg-white/20 flex items-center justify-center text-white font-bold backdrop-blur-sm">M8</div>
@@ -354,6 +362,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </button>
       </div>
 
+      {/* SIDEBAR */}
       <aside className={`
         fixed md:relative z-30 h-full flex flex-col shrink-0
         bg-gradient-to-b from-[#005461] via-[#018790] to-[#005461]
@@ -361,7 +370,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
         ${isMobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
         ${showSidebar ? 'md:w-64' : 'md:w-0 overflow-hidden'}
       `}>
-        {/* Inner Wrapper to maintain width during collapse animation */}
         <div className="w-64 flex flex-col h-full">
            <div className="h-20 flex items-center gap-3 px-6 border-b border-white/10">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white shadow-lg backdrop-blur-sm">
@@ -399,6 +407,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative transition-all duration-300">
          <div className="flex flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-32 scrollbar-thin scrollbar-thumb-gray-300 pt-20 md:pt-8">
@@ -446,7 +455,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 {topLinks.map((link, idx) => (
                                   <div key={link.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
                                       <div className={`w-8 h-8 flex items-center justify-center font-bold rounded-lg text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-800'}`}>
-                                        #{idx + 1}
+                                          #{idx + 1}
                                       </div>
                                       <div className="flex-1 min-w-0">
                                           <p className="font-bold text-gray-800 truncate">{link.title}</p>
@@ -477,7 +486,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                       <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-4 border-b border-gray-200 -mx-4 px-4 md:-mx-8 md:px-8 mb-6 shadow-sm transition-all duration-300">
                          <div className="max-w-5xl mx-auto space-y-4">
-                            
+                           
                             {/* Toolbar: Toggles & Insert Position */}
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
@@ -521,55 +530,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                             {/* Block Type Buttons */}
                             <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-                                <Button 
-                                  onClick={() => addBlock('link')} 
-                                  size="sm" 
-                                  className="bg-[#059669] hover:bg-[#047857] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
-                                >
-                                  <LinkIcon size={16} /> Link
-                                </Button>
-                                <Button 
-                                  onClick={() => addBlock('image_grid')} 
-                                  size="sm" 
-                                  className="bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
-                                >
-                                  <GridIcon size={16} /> Galeri
-                                </Button>
-                                <Button 
-                                  onClick={() => addBlock('text')} 
-                                  size="sm" 
-                                  className="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
-                                >
-                                  <Type size={16} /> Teks
-                                </Button>
-                                <Button 
-                                  onClick={() => addBlock('divider')} 
-                                  size="sm" 
-                                  className="bg-[#115e59] hover:bg-[#134e4a] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
-                                >
-                                  <Minus size={16} /> Garis
-                                </Button>
-                                <Button 
-                                  onClick={() => addBlock('social_embed')} 
-                                  size="sm" 
-                                  className="bg-[#005461] hover:bg-[#003d47] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
-                                >
-                                  <Share2 size={16} /> Posisi Medsos
-                                </Button>
-                                <Button 
-                                  onClick={() => addBlock('youtube')} 
-                                  size="sm" 
-                                  className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
-                                >
-                                  <Youtube size={16} /> YouTube
-                                </Button>
-                                <Button 
-                                  onClick={() => addBlock('map')} 
-                                  size="sm" 
-                                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"
-                                >
-                                  <MapPin size={16} /> Peta
-                                </Button>
+                                <Button onClick={() => addBlock('link')} size="sm" className="bg-[#059669] hover:bg-[#047857] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><LinkIcon size={16} /> Link</Button>
+                                <Button onClick={() => addBlock('image_grid')} size="sm" className="bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><GridIcon size={16} /> Galeri</Button>
+                                <Button onClick={() => addBlock('text')} size="sm" className="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Type size={16} /> Teks</Button>
+                                <Button onClick={() => addBlock('divider')} size="sm" className="bg-[#115e59] hover:bg-[#134e4a] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Minus size={16} /> Garis</Button>
+                                <Button onClick={() => addBlock('social_embed')} size="sm" className="bg-[#005461] hover:bg-[#003d47] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Share2 size={16} /> Posisi Medsos</Button>
+                                <Button onClick={() => addBlock('youtube')} size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Youtube size={16} /> YouTube</Button>
+                                <Button onClick={() => addBlock('map')} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><MapPin size={16} /> Peta</Button>
                             </div>
                          </div>
                       </div>
@@ -619,18 +586,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-3 bg-slate-50 rounded-lg border border-slate-100">
                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Users size={12} /> Target Audience:</span>
                                    <div className="flex flex-wrap items-center gap-4">
-                                       <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
-                                          <input type="radio" checked={block.audience === 'all' || !block.audience} onChange={() => updateBlock(block.id, { audience: 'all' })} className="w-4 h-4 text-emerald-600 focus:ring-emerald-600 border-gray-300" />
-                                          <span className={`text-xs font-bold ${block.audience === 'all' || !block.audience ? 'text-gray-900' : 'text-gray-500'}`}>Semua</span>
-                                       </label>
-                                       <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
-                                          <input type="radio" checked={block.audience === 'teacher'} onChange={() => updateBlock(block.id, { audience: 'teacher' })} className="w-4 h-4 text-yellow-500 focus:ring-yellow-500 border-gray-300" />
-                                          <span className={`text-xs font-bold ${block.audience === 'teacher' ? 'text-yellow-700' : 'text-gray-500'}`}>Guru</span>
-                                       </label>
-                                       <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
-                                          <input type="radio" checked={block.audience === 'student'} onChange={() => updateBlock(block.id, { audience: 'student' })} className="w-4 h-4 text-blue-600 focus:ring-blue-600 border-gray-300" />
-                                          <span className={`text-xs font-bold ${block.audience === 'student' ? 'text-blue-700' : 'text-gray-500'}`}>Siswa</span>
-                                       </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+                                           <input type="radio" checked={block.audience === 'all' || !block.audience} onChange={() => updateBlock(block.id, { audience: 'all' })} className="w-4 h-4 text-emerald-600 focus:ring-emerald-600 border-gray-300" />
+                                           <span className={`text-xs font-bold ${block.audience === 'all' || !block.audience ? 'text-gray-900' : 'text-gray-500'}`}>Semua</span>
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+                                           <input type="radio" checked={block.audience === 'teacher'} onChange={() => updateBlock(block.id, { audience: 'teacher' })} className="w-4 h-4 text-yellow-500 focus:ring-yellow-500 border-gray-300" />
+                                           <span className={`text-xs font-bold ${block.audience === 'teacher' ? 'text-yellow-700' : 'text-gray-500'}`}>Guru</span>
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+                                           <input type="radio" checked={block.audience === 'student'} onChange={() => updateBlock(block.id, { audience: 'student' })} className="w-4 h-4 text-blue-600 focus:ring-blue-600 border-gray-300" />
+                                           <span className={`text-xs font-bold ${block.audience === 'student' ? 'text-blue-700' : 'text-gray-500'}`}>Siswa</span>
+                                        </label>
                                    </div>
                                </div>
 
@@ -978,7 +945,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <Input className="bg-white" type={showNewPassword ? "text" : "password"} label="Konfirmasi Password" placeholder="Ketik ulang password baru" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                                 {passwordError && <div className="flex items-center gap-2 text-xs text-red-600 font-medium bg-red-100 p-2 rounded"><AlertTriangle size={12} /> {passwordError}</div>}
                                 <div className="pt-2">
-                                  <Button variant="danger" size="sm" onClick={handleUpdatePassword} disabled={!newPassword || !confirmPassword} className="w-full justify-center bg-red-600 text-white hover:bg-red-700 border-transparent shadow-lg shadow-red-200"><CheckCircle size={16} /> Update Password</Button>
+                                  {/* 👇 UPDATE 4: Button Loading State */}
+                                  <Button 
+                                    variant="danger" 
+                                    size="sm" 
+                                    onClick={handleUpdatePassword} 
+                                    disabled={!newPassword || !confirmPassword || isSavingPassword} 
+                                    className="w-full justify-center bg-red-600 text-white hover:bg-red-700 border-transparent shadow-lg shadow-red-200"
+                                  >
+                                    {isSavingPassword ? (
+                                        <><Loader2 size={16} className="animate-spin" /> Menyimpan...</>
+                                    ) : (
+                                        <><CheckCircle size={16} /> Update Password</>
+                                    )}
+                                  </Button>
                                   <p className="text-[10px] text-red-600/70 mt-2 text-center">*Harap ingat password baru Anda. Perubahan akan langsung aktif.</p>
                                 </div>
                               </div>
@@ -994,7 +974,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 transition-all duration-300 ease-in-out
                 ${showPreview ? 'w-[380px] p-6' : 'w-0 p-0 overflow-hidden border-none'}
             `}>
-               {/* Inner Wrapper for fixed width content during animation */}
                <div className="w-[330px] flex flex-col items-center h-full sticky top-6">
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Eye size={14}/> Live Preview</h3>
                   <div className="relative w-[300px] h-[600px] bg-gray-900 rounded-[2.5rem] ring-4 ring-gray-200 shadow-2xl overflow-hidden select-none">
