@@ -1,3 +1,7 @@
+export interface AppSettings {
+  key: string;
+  value: string;
+}
 
 export type SocialPlatform = 'website' | 'whatsapp' | 'youtube' | 'instagram' | 'tiktok' | 'twitter' | 'facebook' | 'linkedin' | 'threads' | 'other';
 
