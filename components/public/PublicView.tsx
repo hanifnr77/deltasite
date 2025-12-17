@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, UserProfile, SocialLinkItem, YoutubeBlock, MapBlock } from '../../types';
-import { ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle, AlertCircle, Users, GraduationCap, School } from 'lucide-react';
 import { IconMapper } from '../ui/IconMapper';
 
 interface PublicViewProps {
@@ -11,6 +11,8 @@ interface PublicViewProps {
 }
 
 export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false }) => {
+  const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'student'>('all');
+
   const activeSocials = socials.filter(s => s.active && s.url);
   const currentYear = new Date().getFullYear();
   
@@ -24,6 +26,26 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   };
 
   const interactionClass = isPreview ? 'pointer-events-none' : 'cursor-pointer';
+
+  // --- Filter Logic ---
+  const filteredBlocks = blocks.filter(block => {
+    // 1. Basic Active Check for Links
+    if (block.type === 'link' && !(block as LinkBlock).active) return false;
+
+    // 2. Audience Check
+    const blockAudience = block.audience || 'all';
+
+    if (activeTab === 'all') {
+      return blockAudience === 'all';
+    }
+    if (activeTab === 'teacher') {
+      return blockAudience === 'all' || blockAudience === 'teacher';
+    }
+    if (activeTab === 'student') {
+      return blockAudience === 'all' || blockAudience === 'student';
+    }
+    return true;
+  });
 
   // --- Helper to convert YouTube URL to Embed URL (Robust Version) ---
   const getYoutubeEmbedUrl = (urlStr: string) => {
@@ -484,19 +506,63 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
           </div>
         </div>
 
+        {/* AUDIENCE FILTER TABS */}
+        <div className="w-full max-w-sm mx-auto animate-fade-in relative z-20 flex flex-col items-center">
+          
+          {/* Label Petunjuk */}
+          <div className="flex items-center gap-2 mb-3">
+             <div className="h-px w-6 bg-gradient-to-r from-transparent to-white/40"></div>
+             <p className="text-[10px] font-bold text-white/80 uppercase tracking-[0.2em]">
+               Pilih Kategori Menu
+             </p>
+             <div className="h-px w-6 bg-gradient-to-l from-transparent to-white/40"></div>
+          </div>
+
+          <div className="w-full bg-black/20 backdrop-blur-md p-1.5 rounded-2xl flex gap-1 border border-white/5 shadow-inner">
+            <button 
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeTab === 'all' 
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-white/10' 
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Users size={14} /> Umum
+            </button>
+            <button 
+              onClick={() => setActiveTab('teacher')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeTab === 'teacher' 
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20 ring-1 ring-white/10' 
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <School size={14} /> Guru
+            </button>
+            <button 
+              onClick={() => setActiveTab('student')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                activeTab === 'student' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 ring-1 ring-white/10' 
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <GraduationCap size={14} /> Siswa
+            </button>
+          </div>
+        </div>
+
         {/* Social Links */}
         {!hasSocialEmbedBlock && activeSocials.length > 0 && renderSocials()}
 
         {/* Blocks */}
         <div className="w-full space-y-4 mt-2">
-          {blocks.map((block, idx) => {
-            if (block.type === 'link' && !(block as LinkBlock).active) return null;
-            
+          {filteredBlocks.map((block, idx) => {
             return (
                <div 
                  key={block.id} 
                  className="animate-fade-in opacity-0 fill-mode-forwards"
-                 style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'forwards' }}
+                 style={{ animationDelay: `${idx * 100}ms`, animationFillMode: 'forwards' }}
                >
                   {block.type === 'link' && renderLink(block as LinkBlock)}
                   {block.type === 'text' && renderText(block as TextBlock)}
@@ -509,9 +575,14 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             );
           })}
 
-          {blocks.length === 0 && (
-            <div className="text-center py-12 px-4 rounded-2xl bg-white/5 border border-dashed border-white/20 backdrop-blur-sm">
-              <p className="text-slate-400 font-medium text-sm">Belum ada konten.</p>
+          {filteredBlocks.length === 0 && (
+            <div className="text-center py-12 px-4 rounded-2xl bg-white/5 border border-dashed border-white/20 backdrop-blur-sm animate-fade-in">
+              <div className="inline-flex p-3 rounded-full bg-white/5 mb-3 text-slate-400">
+                {activeTab === 'teacher' ? <School size={24} /> : activeTab === 'student' ? <GraduationCap size={24} /> : <Users size={24} />}
+              </div>
+              <p className="text-slate-400 font-medium text-sm">
+                Belum ada menu khusus {activeTab === 'teacher' ? 'Guru' : activeTab === 'student' ? 'Siswa' : 'Umum'} saat ini.
+              </p>
             </div>
           )}
         </div>
