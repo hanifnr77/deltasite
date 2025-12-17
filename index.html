@@ -2,10 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>New Deltasite MTsN 8 Tulungagung</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Deltasite MTsN 8 Tulungagung</title>
     <link rel="icon" href="https://iili.io/f2LWiwG.png" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="https://iili.io/f2LWiwG.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -29,6 +37,7 @@
             animation: {
               'float': 'float 6s ease-in-out infinite',
               'fade-in': 'fadeIn 0.8s ease-out forwards',
+              'marquee': 'marquee 25s linear infinite',
             },
             keyframes: {
               float: {
@@ -38,6 +47,10 @@
               fadeIn: {
                 '0%': { opacity: '0', transform: 'translateY(10px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              marquee: {
+                '0%': { transform: 'translateX(100%)' },
+                '100%': { transform: 'translateX(-100%)' },
               }
             }
           },
@@ -75,10 +88,9 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="./index.tsx"></script>
+  </body>
 </html>
