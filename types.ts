@@ -1,6 +1,6 @@
 export interface AppSettings {
-  key: string;
-  value: string;
+  admin_password?: string;
+  [key: string]: string | undefined;
 }
 
 export type SocialPlatform = 'website' | 'whatsapp' | 'youtube' | 'instagram' | 'tiktok' | 'twitter' | 'facebook' | 'linkedin' | 'threads' | 'other';
