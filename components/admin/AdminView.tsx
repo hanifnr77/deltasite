@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, ImageGridItem, UserProfile, SocialLinkItem, SocialPlatform, YoutubeBlock, MapBlock } from '../../types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { generateEnhancedTitle, suggestCategory } from '../../services/geminiService';
 import { uploadImage } from '../../services/storageService'; 
 import { IconMapper } from '../ui/IconMapper';
 import { PublicView } from '../public/PublicView';
@@ -15,7 +14,8 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline, List, ListOrdered,
   ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2, GripVertical, ArrowDownToLine, ArrowUpToLine,
-  Youtube, MapPin, PanelLeft, Users, GraduationCap, School
+  Youtube, MapPin, PanelLeft, Users, GraduationCap, School,
+  MousePointerClick, TrendingUp, Info, AlertOctagon, Megaphone
 } from 'lucide-react';
 
 interface AdminViewProps {
@@ -32,7 +32,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   blocks, profile, socials, 
   onUpdateBlocks, onUpdateProfile, onUpdateSocials, onLogout 
 }) => {
-  const [activeTab, setActiveTab] = useState<'blocks' | 'socials' | 'profile'>('blocks');
+  // --- Updated Active Tab State to include 'dashboard' ---
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'blocks' | 'socials' | 'profile'>('dashboard');
+  
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -59,6 +61,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // --- Dashboard Calculations ---
+  const linkBlocks = blocks.filter(b => b.type === 'link') as LinkBlock[];
+  const totalLinks = linkBlocks.length;
+  const activeLinks = linkBlocks.filter(b => b.active).length;
+  const totalClicks = linkBlocks.reduce((acc, curr) => acc + (curr.clicks || 0), 0);
+  const topLinks = [...linkBlocks].sort((a, b) => (b.clicks || 0) - (a.clicks || 0)).slice(0, 3);
 
   // --- Generic Block Logic ---
   const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map') => {
@@ -366,6 +375,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
            <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
               <div className="text-xs font-bold text-white/50 uppercase px-2 mb-2">Menu Utama</div>
+              <SidebarItem id="dashboard" label="Dashboard" icon={LayoutDashboard} />
               <SidebarItem id="blocks" label="Konten & Link" icon={LinkIcon} />
               <SidebarItem id="socials" label="Media Sosial" icon={Share2} />
               <SidebarItem id="profile" label="Profil & Pengaturan" icon={Settings} />
@@ -393,6 +403,68 @@ export const AdminView: React.FC<AdminViewProps> = ({
          <div className="flex flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-32 scrollbar-thin scrollbar-thumb-gray-300 pt-20 md:pt-8">
                <div className="max-w-5xl mx-auto animate-fade-in">
+                  
+                  {activeTab === 'dashboard' && (
+                    <div className="space-y-6">
+                       <div>
+                          <h2 className="text-2xl font-heading font-bold text-gray-800">Dashboard</h2>
+                          <p className="text-gray-500 text-sm">Ringkasan statistik dan performa microsite.</p>
+                       </div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                             <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center"><LinkIcon size={24} /></div>
+                             <div>
+                                <h3 className="text-3xl font-bold text-gray-800">{totalLinks}</h3>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Tombol</p>
+                             </div>
+                          </div>
+                          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><CheckCircle size={24} /></div>
+                             <div>
+                                <h3 className="text-3xl font-bold text-gray-800">{activeLinks}</h3>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tombol Aktif</p>
+                             </div>
+                          </div>
+                          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                             <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center"><MousePointerClick size={24} /></div>
+                             <div>
+                                <h3 className="text-3xl font-bold text-gray-800">{totalClicks.toLocaleString()}</h3>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Klik</p>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                          <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+                             <TrendingUp size={20} className="text-emerald-500" />
+                             <h3 className="font-heading font-bold text-lg text-gray-800">Top Performa Link</h3>
+                          </div>
+                          
+                          {topLinks.length > 0 ? (
+                            <div className="space-y-4">
+                                {topLinks.map((link, idx) => (
+                                  <div key={link.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                                      <div className={`w-8 h-8 flex items-center justify-center font-bold rounded-lg text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-800'}`}>
+                                        #{idx + 1}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                          <p className="font-bold text-gray-800 truncate">{link.title}</p>
+                                          <p className="text-xs text-gray-500 truncate">{link.url}</p>
+                                      </div>
+                                      <div className="text-right">
+                                         <span className="block font-bold text-emerald-600">{link.clicks.toLocaleString()}</span>
+                                         <span className="text-[10px] text-gray-400">klik</span>
+                                      </div>
+                                  </div>
+                                ))}
+                            </div>
+                          ) : (
+                            <p className="text-center text-gray-400 py-8 text-sm">Belum ada data statistik link.</p>
+                          )}
+                       </div>
+                    </div>
+                  )}
                   
                   {activeTab === 'blocks' && (
                     <div className="space-y-6">
@@ -855,6 +927,43 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <textarea className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 focus:border-emerald-500 outline-none shadow-sm min-h-[100px] text-sm" value={profile.bio} onChange={(e) => onUpdateProfile({...profile, bio: e.target.value})} />
                               </div>
                           </div>
+
+                          {/* --- RUNNING TEXT EDITOR --- */}
+                          <div className="space-y-4 pt-4">
+                              <h3 className="text-sm font-bold text-gray-400 uppercase border-b border-gray-100 pb-2 flex items-center gap-2"><Megaphone size={16}/> Running Text / Info Bar</h3>
+                              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-4">
+                                  <div className="flex items-center justify-between">
+                                      <span className="text-sm font-bold text-gray-700">Tampilkan Running Text</span>
+                                      <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked={profile.runningTextActive || false} onChange={(e) => onUpdateProfile({...profile, runningTextActive: e.target.checked})} className="sr-only peer" />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                      </label>
+                                  </div>
+                                  
+                                  <textarea 
+                                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 focus:border-emerald-500 outline-none shadow-sm min-h-[80px] text-sm" 
+                                    value={profile.runningText || ''} 
+                                    onChange={(e) => onUpdateProfile({...profile, runningText: e.target.value})}
+                                    placeholder="Tulis informasi penting disini..."
+                                  />
+                                  
+                                  <div className="flex flex-wrap gap-4">
+                                     <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="runningType" checked={profile.runningTextType === 'info' || !profile.runningTextType} onChange={() => onUpdateProfile({...profile, runningTextType: 'info'})} className="text-blue-500 focus:ring-blue-500" />
+                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1"><Info size={12}/> Info (Biru)</span>
+                                     </label>
+                                     <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="runningType" checked={profile.runningTextType === 'warning'} onChange={() => onUpdateProfile({...profile, runningTextType: 'warning'})} className="text-yellow-500 focus:ring-yellow-500" />
+                                        <span className="text-xs font-bold text-yellow-700 bg-yellow-50 px-2 py-1 rounded flex items-center gap-1"><AlertTriangle size={12}/> Peringatan (Kuning)</span>
+                                     </label>
+                                     <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="runningType" checked={profile.runningTextType === 'danger'} onChange={() => onUpdateProfile({...profile, runningTextType: 'danger'})} className="text-red-500 focus:ring-red-500" />
+                                        <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded flex items-center gap-1"><AlertOctagon size={12}/> Penting/Bahaya (Merah)</span>
+                                     </label>
+                                  </div>
+                              </div>
+                          </div>
+
                           <div className="space-y-4 pt-4">
                               <h3 className="text-sm font-bold text-gray-400 uppercase border-b border-gray-100 pb-2">Footer</h3>
                               <Input label="Teks Copyright" value={profile.footerText || ''} onChange={(e) => onUpdateProfile({...profile, footerText: e.target.value})} placeholder="© 2025..." />
