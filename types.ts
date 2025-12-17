@@ -16,6 +16,10 @@ export interface UserProfile {
   themeColor: 'blue' | 'purple' | 'green';
   adminPassword?: string; // Password dinamis
   footerText?: string; // Teks footer custom
+  // Running Text Feature
+  runningText?: string;
+  runningTextActive?: boolean;
+  runningTextType?: 'info' | 'warning' | 'danger';
 }
 
 // --- Block System ---
