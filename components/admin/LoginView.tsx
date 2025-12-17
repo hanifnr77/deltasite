@@ -2,33 +2,40 @@ import React, { useState } from 'react';
 import { Lock, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+// 👇 IMPORT PENTING: Menggunakan Logic Keamanan Baru
+import { useAuth } from '../../context/AuthContext';
 
-interface LoginViewProps {
-  onLogin: () => void;
-  expectedPassword?: string;
-}
-
-export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword }) => {
+export const LoginView: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Mengambil fungsi login dari sistem keamanan pusat
+  const { login } = useAuth(); 
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(false);
 
-    const validPassword = expectedPassword || 'admin';
+    try {
+      // 👇 LOGIKA BARU: Cek password via AuthContext (Spreadsheet)
+      const success = await login(password);
 
-    setTimeout(() => {
-      if (password === validPassword || password === 'admin123') {
-        onLogin();
+      if (success) {
+        // Jika sukses, tidak perlu ngapa-ngapain. 
+        // App.tsx akan otomatis mendeteksi status login dan ganti halaman.
       } else {
+        // Jika gagal
         setError(true);
         setLoading(false);
       }
-    }, 800);
+    } catch (err) {
+      console.error("Login Error:", err);
+      setError(true);
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,8 +62,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword 
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Kode Akses / Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="text-center tracking-widest font-bold py-3 pr-10 pl-10 border-gray-300 focus:border-emerald-500"
+                onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(false); // Reset error saat ketik ulang
+                }}
+                className={`text-center tracking-widest font-bold py-3 pr-10 pl-10 border-gray-300 focus:border-emerald-500 ${error ? 'border-red-500 focus:border-red-500' : ''}`}
                 autoFocus
               />
               <button
@@ -70,7 +80,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword 
             </div>
             
             {error && (
-              <p className="text-red-500 text-xs text-center font-medium animate-pulse mt-2">
+              <p className="text-red-500 text-xs text-center font-medium animate-pulse mt-2 bg-red-50 py-1 rounded-md border border-red-100">
                 Kode akses salah. Silakan coba lagi.
               </p>
             )}
@@ -78,15 +88,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, expectedPassword 
 
           <Button 
             type="submit" 
-            className="w-full py-4 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/30 border-none text-white"
+            className="w-full py-4 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/30 border-none text-white transition-all transform active:scale-95"
             loading={loading}
           >
-            Masuk Dashboard <ChevronRight size={20} />
+            {loading ? 'Memverifikasi...' : (
+                <>Masuk Dashboard <ChevronRight size={20} /></>
+            )}
           </Button>
         </form>
 
         <div className="mt-8 text-center">
-           <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+           <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold opacity-70">
              Protected by DeltaZone Security
            </p>
         </div>
