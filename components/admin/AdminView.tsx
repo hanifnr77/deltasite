@@ -74,6 +74,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // --- Generic Block Logic ---
   const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map', indexToInsert?: number) => {
     let newBlock: Block;
+    // Gunakan random string agar ID 100% unik
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const defaultAudience = 'all';
 
@@ -116,23 +117,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
        } as DividerBlock;
     }
 
+    // 👇 LOGIKA PERBAIKAN: Hanya jalan SEKALI
     let updatedBlocks = [...blocks];
-    if (insertMode === 'top') {
-        updatedBlocks.unshift(newBlock);
-    } else {
-        updatedBlocks.push(newBlock);
-    }
+    
     if (typeof indexToInsert === 'number') {
-        updatedBlocks.splice(indexToInsert + 1, 0, newBlock); // Sisipkan SETELAH index
+        // Jika pakai tombol (+) kecil, sisipkan di posisi spesifik
+        updatedBlocks.splice(indexToInsert + 1, 0, newBlock); 
     } else {
-        // Fallback ke logika lama (Top/Bottom)
+        // Jika pakai tombol menu atas, ikuti setting "Posisi Tambah"
         if (insertMode === 'top') {
             updatedBlocks.unshift(newBlock);
         } else {
             updatedBlocks.push(newBlock);
         }
     }
-
+    
     onUpdateBlocks(updatedBlocks);
     addToast('Blok baru berhasil ditambahkan', 'success');
   };
