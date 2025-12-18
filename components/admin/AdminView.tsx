@@ -74,7 +74,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // --- Generic Block Logic ---
   const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map', indexToInsert?: number) => {
     let newBlock: Block;
-    const id = Date.now().toString();
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const defaultAudience = 'all';
 
     if (type === 'link') {
