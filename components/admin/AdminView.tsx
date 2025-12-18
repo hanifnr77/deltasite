@@ -72,7 +72,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const topLinks = [...linkBlocks].sort((a, b) => (b.clicks || 0) - (a.clicks || 0)).slice(0, 3);
 
   // --- Generic Block Logic ---
-  const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map') => {
+  const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map', indexToInsert?: number) => {
     let newBlock: Block;
     const id = Date.now().toString();
     const defaultAudience = 'all';
@@ -122,7 +122,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
     } else {
         updatedBlocks.push(newBlock);
     }
-    
+    if (typeof indexToInsert === 'number') {
+        updatedBlocks.splice(indexToInsert + 1, 0, newBlock); // Sisipkan SETELAH index
+    } else {
+        // Fallback ke logika lama (Top/Bottom)
+        if (insertMode === 'top') {
+            updatedBlocks.unshift(newBlock);
+        } else {
+            updatedBlocks.push(newBlock);
+        }
+    }
+
     onUpdateBlocks(updatedBlocks);
     addToast('Blok baru berhasil ditambahkan', 'success');
   };
@@ -563,6 +573,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                   <button onClick={() => moveBlock(index, 'up')} disabled={index===0} className="p-1 hover:bg-white rounded disabled:opacity-30"><ArrowUp size={14}/></button>
                                   <button onClick={() => moveBlock(index, 'down')} disabled={index===blocks.length-1} className="p-1 hover:bg-white rounded disabled:opacity-30"><ArrowDown size={14}/></button>
                               </div>
+                              <div className="group/add relative mr-2">
+    <button className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Sisipkan Konten Dibawah Ini">
+        <Plus size={14} />
+    </button>
+    {/* Dropdown Mini saat Hover */}
+    <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-xl border border-gray-100 p-1 hidden group-hover/add:block z-50">
+        <div className="text-[10px] font-bold text-gray-400 px-2 py-1 uppercase">Sisipkan:</div>
+        <button onClick={() => addBlock('link', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><LinkIcon size={12}/> Link</button>
+        <button onClick={() => addBlock('text', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><Type size={12}/> Teks</button>
+        <button onClick={() => addBlock('divider', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><Minus size={12}/> Garis</button>
+        <button onClick={() => addBlock('image_grid', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><GridIcon size={12}/> Galeri</button>
+    </div>
+</div>
 
                               {/* AUDIENCE BADGES IN HEADER */}
                               {block.audience === 'teacher' && <span className="text-[10px] uppercase font-bold px-2 py-1 rounded border mr-2 bg-yellow-50 text-yellow-600 border-yellow-100 flex items-center gap-1"><School size={10} /> Guru</span>}
