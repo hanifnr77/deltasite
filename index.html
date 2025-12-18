@@ -98,45 +98,27 @@
     
     <script type="module" src="/index.tsx"></script>
     <script>
-      window.addEventListener('error', (e) => {
-        // 1. Ambil pesan error dengan aman
-        const msg = e.message || '';
-        
-        // 2. Cek 3 Kemungkinan Error Update:
-        // - Loading chunk: File JS hilang/berubah nama (paling sering)
-        // - Importing a module: Gagal load module modern
-        // - Unexpected token: Browser minta JS tapi dikasih HTML (biasanya halaman 404)
-        if (msg.includes('Loading chunk') || msg.includes('Importing a module script failed') || msg.includes('Unexpected token')) {
-          
-          e.preventDefault(); // Jangan tampilkan error merah di console user
-          console.log('⚡ Versi baru terdeteksi! Melakukan refresh otomatis...');
-          
-          // 3. Bersihkan Cache Service Worker (Penting untuk PWA)
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then((regs) => {
-              for(let reg of regs) { 
-                reg.unregister(); 
-              }
+      // 1. Script ini akan MEMBUNUH semua Service Worker yang bikin cache nyangkut
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister().then(function() {
+                console.log('Service Worker unregistered (Cache Dibersihkan).');
             });
           }
-          
-          // 4. Paksa Reload dari Server (Bypass Cache Browser)
-          window.location.reload(true);
-        }
-      }, true);
-    </script>
-
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW PWA Siap: ', registration.scope);
-            }, (err) => {
-              console.log('SW Gagal: ', err);
-            });
         });
       }
+
+      // 2. Deteksi Error Layar Putih & Refresh Otomatis
+      window.addEventListener('error', (e) => {
+        const msg = e.message || '';
+        // Jika file JS hilang (404) karena update baru
+        if (msg.includes('Loading chunk') || msg.includes('Importing a module script failed') || msg.includes('Unexpected token')) {
+          e.preventDefault(); 
+          console.log('⚡ Versi baru terdeteksi! Refreshing...');
+          window.location.reload(true); // Paksa reload dari server
+        }
+      }, true);
     </script>
   </body>
 </html>
