@@ -98,21 +98,29 @@
     
     <script type="module" src="/index.tsx"></script>
     <script>
-      // 1. Auto Reload jika ada Chunk Error (File lama hilang tertimpa update)
       window.addEventListener('error', (e) => {
-        // Cek apakah errornya karena gagal load file JS/CSS (404)
-        if (e.message && (e.message.includes('Loading chunk') || e.message.includes('Importing a module script failed'))) {
-          e.preventDefault();
-          console.log('Versi baru terdeteksi, melakukan refresh otomatis...');
-          // Hapus cache service worker jika ada (opsional tapi bagus)
+        // 1. Ambil pesan error dengan aman
+        const msg = e.message || '';
+        
+        // 2. Cek 3 Kemungkinan Error Update:
+        // - Loading chunk: File JS hilang/berubah nama (paling sering)
+        // - Importing a module: Gagal load module modern
+        // - Unexpected token: Browser minta JS tapi dikasih HTML (biasanya halaman 404)
+        if (msg.includes('Loading chunk') || msg.includes('Importing a module script failed') || msg.includes('Unexpected token')) {
+          
+          e.preventDefault(); // Jangan tampilkan error merah di console user
+          console.log('⚡ Versi baru terdeteksi! Melakukan refresh otomatis...');
+          
+          // 3. Bersihkan Cache Service Worker (Penting untuk PWA)
           if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for(let registration of registrations) {
-                registration.unregister();
+            navigator.serviceWorker.getRegistrations().then((regs) => {
+              for(let reg of regs) { 
+                reg.unregister(); 
               }
             });
           }
-          // Reload halaman dengan memaksa ambil dari server (bukan cache)
+          
+          // 4. Paksa Reload dari Server (Bypass Cache Browser)
           window.location.reload(true);
         }
       }, true);
