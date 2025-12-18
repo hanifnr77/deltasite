@@ -97,6 +97,26 @@
     <div id="root"></div>
     
     <script type="module" src="/index.tsx"></script>
+    <script>
+      // 1. Auto Reload jika ada Chunk Error (File lama hilang tertimpa update)
+      window.addEventListener('error', (e) => {
+        // Cek apakah errornya karena gagal load file JS/CSS (404)
+        if (e.message && (e.message.includes('Loading chunk') || e.message.includes('Importing a module script failed'))) {
+          e.preventDefault();
+          console.log('Versi baru terdeteksi, melakukan refresh otomatis...');
+          // Hapus cache service worker jika ada (opsional tapi bagus)
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+              }
+            });
+          }
+          // Reload halaman dengan memaksa ambil dari server (bukan cache)
+          window.location.reload(true);
+        }
+      }, true);
+    </script>
 
     <script>
       if ('serviceWorker' in navigator) {
