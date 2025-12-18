@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, UserProfile, SocialLinkItem, YoutubeBlock, MapBlock } from '../../types';
 import { ExternalLink, CheckCircle, AlertCircle, Users, GraduationCap, School, Megaphone, Clock, Calendar } from 'lucide-react';
 import { IconMapper } from '../ui/IconMapper';
+// Fungsi Pintar: Hitung Kontras Warna (Hitam/Putih)
+const getContrastColor = (hexColor: string) => {
+  if (!hexColor || hexColor[0] !== '#') return '#ffffff';
+  // Konversi Hex ke RGB
+  const r = parseInt(hexColor.substr(1, 2), 16);
+  const g = parseInt(hexColor.substr(3, 2), 16);
+  const b = parseInt(hexColor.substr(5, 2), 16);
+  // Rumus YIQ (standar mata manusia)
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  // Jika cerah (>128) pakai hitam, jika gelap pakai putih
+  return (yiq >= 128) ? '#0f172a' : '#ffffff';
+}
 
 interface PublicViewProps {
   blocks: Block[];
@@ -161,7 +173,13 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const renderLink = (link: LinkBlock) => {
     const isImageMode = link.displayMode === 'image' && !!link.image;
     const hasCustomColor = !!link.customColor;
-    const containerStyle: React.CSSProperties = hasCustomColor ? { backgroundColor: link.customColor, borderColor: 'rgba(255,255,255,0.2)' } : {}; 
+    // 👇 LOGIKA WARNA PINTAR
+    const bgColor = link.customColor || '#059669'; // Default Emerald
+    const textColor = hasCustomColor ? getContrastColor(bgColor) : '#ffffff'; 
+    const containerStyle: React.CSSProperties = hasCustomColor 
+      ? { backgroundColor: bgColor, borderColor: 'rgba(0,0,0,0.1)', color: textColor } 
+      : {}; 
+    
     const isGlass = !hasCustomColor;
 
     return (
@@ -174,7 +192,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         className={`group block w-full transform transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] ${interactionClass}`}
       >
         <div 
-          className={`relative flex items-stretch rounded-2xl transition-all duration-300 overflow-hidden ${isGlass ? 'bg-white/10 backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/15 hover:border-[#00B7B5]/50 hover:shadow-[0_0_20px_rgba(0,183,181,0.25)]' : 'shadow-md hover:shadow-xl'}`}
+          className={`relative flex items-stretch rounded-2xl transition-all duration-300 overflow-hidden ${isGlass ? 'bg-white/10 backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/15' : 'shadow-md hover:shadow-xl'}`}
           style={containerStyle}
         >
           {isImageMode ? (
@@ -184,20 +202,22 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             </div>
           ) : (
             <div className="pl-4 py-4 flex items-center justify-center">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner transition-all duration-300 shrink-0 ${isGlass ? 'bg-[#005461]/40 text-[#00B7B5] group-hover:bg-[#00B7B5] group-hover:text-[#005461]' : 'bg-black/20 text-white group-hover:bg-black/10'}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner transition-all duration-300 shrink-0 ${isGlass ? 'bg-[#005461]/40 text-[#00B7B5]' : 'bg-black/10'}`} style={!isGlass ? { color: textColor } : {}}>
                   <ExternalLink size={20} />
                 </div>
             </div>
           )}
 
           <div className={`flex-1 flex flex-col justify-center min-w-0 py-3 ${isImageMode ? 'px-4' : 'px-4'}`}>
-            <span className="font-heading font-bold text-sm md:text-base leading-tight text-white group-hover:text-[#00B7B5] transition-colors shadow-black/10 drop-shadow-sm">{link.title}</span>
-            {link.subtitle && <span className="text-xs font-medium mt-1 line-clamp-2 text-slate-300 group-hover:text-white/90">{link.subtitle}</span>}
-            {!isImageMode && link.category && <span className="text-[10px] uppercase font-bold tracking-wide mt-1.5 text-slate-400 group-hover:text-[#00B7B5]/80">{link.category}</span>}
+            <span className={`font-heading font-bold text-sm md:text-base leading-tight transition-colors shadow-black/10 drop-shadow-sm ${isGlass ? 'text-white group-hover:text-[#00B7B5]' : ''}`} style={!isGlass ? { color: textColor } : {}}>
+                {link.title}
+            </span>
+            {link.subtitle && <span className={`text-xs font-medium mt-1 line-clamp-2 ${isGlass ? 'text-slate-300' : 'opacity-80'}`} style={!isGlass ? { color: textColor } : {}}>{link.subtitle}</span>}
+            {!isImageMode && link.category && <span className={`text-[10px] uppercase font-bold tracking-wide mt-1.5 ${isGlass ? 'text-slate-400' : 'opacity-60'}`} style={!isGlass ? { color: textColor } : {}}>{link.category}</span>}
           </div>
           
           <div className="pr-4 py-4 flex items-center justify-center">
-            <div className={`w-8 h-8 flex items-center justify-center rounded-full transition-all shrink-0 ${isGlass ? 'bg-white/5 text-slate-400 group-hover:bg-[#00B7B5] group-hover:text-[#005461]' : 'bg-black/10 text-white/70 group-hover:bg-white/20 group-hover:text-white'}`}>
+            <div className={`w-8 h-8 flex items-center justify-center rounded-full transition-all shrink-0 ${isGlass ? 'bg-white/5 text-slate-400' : 'bg-black/5'}`} style={!isGlass ? { color: textColor } : {}}>
               <ExternalLink size={14} />
             </div>
           </div>
