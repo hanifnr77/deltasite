@@ -333,7 +333,8 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const runningTextBg = profile.runningTextType ? runningTextColors[profile.runningTextType] : 'bg-blue-600';
 
   return (
-    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 ${isPreview ? 'h-full min-h-full' : 'min-h-screen'}`}>
+    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-cover bg-center bg-no-repeat bg-slate-900/70 bg-blend-overlay text-slate-100 min-h-screen pb-12`}
+      style={{ backgroundImage: "url('/bg-madrasah.jpg')" }}>
       
       {/* Keyframes for Marquee */}
       <style>
