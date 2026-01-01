@@ -8,6 +8,7 @@ interface PublicViewProps {
   profile: UserProfile;
   socials: SocialLinkItem[];
   isPreview?: boolean;
+  onBlockClick?: (blockId: string) => void;
 }
 
 // Fungsi Pintar: Hitung Kontras Warna (Hitam/Putih)
