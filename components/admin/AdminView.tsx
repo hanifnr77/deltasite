@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, ImageGridItem, UserProfile, SocialLinkItem, SocialPlatform, YoutubeBlock, MapBlock } from '../../types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-// 👇 UPDATE 1: Import saveSetting untuk keamanan password
 import { uploadImage, saveSetting } from '../../services/storageService'; 
 import { IconMapper } from '../ui/IconMapper';
 import { PublicView } from '../public/PublicView';
@@ -16,7 +15,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   ArrowUp, ArrowDown, Menu, X, Share2, Settings, User, Lock, AlertTriangle, CheckCircle, ExternalLink, Loader2, GripVertical, ArrowDownToLine, ArrowUpToLine,
   Youtube, MapPin, PanelLeft, Users, GraduationCap, School,
-  MousePointerClick, TrendingUp, Info, AlertOctagon, Megaphone
+  MousePointerClick, TrendingUp, Info, AlertOctagon, Megaphone, Filter
 } from 'lucide-react';
 
 interface AdminViewProps {
@@ -47,6 +46,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // Smart Insert State
   const [insertMode, setInsertMode] = useState<'top' | 'bottom'>('bottom');
 
+  // Stats Limit State (Fitur Baru)
+  const [statsLimit, setStatsLimit] = useState<number | 'all'>(10);
+
   // Drag and Drop State
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   
@@ -61,7 +63,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
-  // 👇 UPDATE 2: State loading khusus untuk simpan password
   const [isSavingPassword, setIsSavingPassword] = useState(false); 
 
   // --- Dashboard Calculations ---
@@ -69,12 +70,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const totalLinks = linkBlocks.length;
   const activeLinks = linkBlocks.filter(b => b.active).length;
   const totalClicks = linkBlocks.reduce((acc, curr) => acc + (curr.clicks || 0), 0);
-  const topLinks = [...linkBlocks].sort((a, b) => (b.clicks || 0) - (a.clicks || 0)).slice(0, 3);
+  
+  // Logika Sortir & Limit (Fitur Baru)
+  const sortedLinks = [...linkBlocks].sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
+  const displayedLinks = statsLimit === 'all' ? sortedLinks : sortedLinks.slice(0, statsLimit);
 
   // --- Generic Block Logic ---
   const addBlock = (type: 'link' | 'text' | 'divider' | 'image_grid' | 'social_embed' | 'youtube' | 'map', indexToInsert?: number) => {
     let newBlock: Block;
-    // Gunakan random string agar ID 100% unik
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const defaultAudience = 'all';
 
@@ -117,14 +120,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
        } as DividerBlock;
     }
 
-    // 👇 LOGIKA PERBAIKAN: Hanya jalan SEKALI
     let updatedBlocks = [...blocks];
     
     if (typeof indexToInsert === 'number') {
-        // Jika pakai tombol (+) kecil, sisipkan di posisi spesifik
         updatedBlocks.splice(indexToInsert + 1, 0, newBlock); 
     } else {
-        // Jika pakai tombol menu atas, ikuti setting "Posisi Tambah"
         if (insertMode === 'top') {
             updatedBlocks.unshift(newBlock);
         } else {
@@ -300,7 +300,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     onUpdateSocials(socials.map(s => s.id === id ? { ...s, ...updates } : s));
   };
 
-  // --- Password Logic (UPDATED SECURE) ---
+  // --- Password Logic ---
   const handleUpdatePassword = async () => {
     setPasswordError('');
     if (newPassword.length < 6) {
@@ -312,7 +312,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
-    // 👇 UPDATE 3: Gunakan saveSetting untuk update ke Sheet Settings
     setIsSavingPassword(true);
     try {
       await saveSetting('admin_password', newPassword);
@@ -454,16 +453,35 @@ export const AdminView: React.FC<AdminViewProps> = ({
                        </div>
 
                        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                          <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
-                             <TrendingUp size={20} className="text-emerald-500" />
-                             <h3 className="font-heading font-bold text-lg text-gray-800">Top Performa Link</h3>
+                          <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
+                             <div className="flex items-center gap-2">
+                                <TrendingUp size={20} className="text-emerald-500" />
+                                <h3 className="font-heading font-bold text-lg text-gray-800">Top Performa Link</h3>
+                             </div>
+                             
+                             {/* DROPDOWN FILTER LIMIT */}
+                             <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-gray-400 uppercase hidden sm:inline">Tampilkan:</span>
+                                <select 
+                                  value={statsLimit} 
+                                  onChange={(e) => setStatsLimit(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+                                  className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 focus:border-emerald-500 outline-none text-gray-700"
+                                >
+                                  <option value={5}>5 Besar</option>
+                                  <option value={10}>10 Besar</option>
+                                  <option value={25}>25 Besar</option>
+                                  <option value={50}>50 Besar</option>
+                                  <option value={100}>100 Besar</option>
+                                  <option value="all">Semua</option>
+                                </select>
+                             </div>
                           </div>
                           
-                          {topLinks.length > 0 ? (
+                          {displayedLinks.length > 0 ? (
                             <div className="space-y-4">
-                                {topLinks.map((link, idx) => (
+                                {displayedLinks.map((link, idx) => (
                                   <div key={link.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
-                                      <div className={`w-8 h-8 flex items-center justify-center font-bold rounded-lg text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-800'}`}>
+                                      <div className={`w-8 h-8 flex items-center justify-center font-bold rounded-lg text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-gray-700' : idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-500'}`}>
                                           #{idx + 1}
                                       </div>
                                       <div className="flex-1 min-w-0">
@@ -476,6 +494,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                       </div>
                                   </div>
                                 ))}
+                                {statsLimit !== 'all' && displayedLinks.length < totalLinks && (
+                                   <div className="text-center pt-2">
+                                     <button onClick={() => setStatsLimit('all')} className="text-xs font-bold text-emerald-600 hover:underline">Lihat Semua Link</button>
+                                   </div>
+                                )}
                             </div>
                           ) : (
                             <p className="text-center text-gray-400 py-8 text-sm">Belum ada data statistik link.</p>
@@ -496,57 +519,57 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur py-4 border-b border-gray-200 -mx-4 px-4 md:-mx-8 md:px-8 mb-6 shadow-sm transition-all duration-300">
                          <div className="max-w-5xl mx-auto space-y-4">
                            
-                            {/* Toolbar: Toggles & Insert Position */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                  {/* Sidebar Toggle */}
+                           {/* Toolbar: Toggles & Insert Position */}
+                           <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-4">
+                                 {/* Sidebar Toggle */}
+                                 <button 
+                                   onClick={() => setShowSidebar(!showSidebar)}
+                                   className={`p-2 rounded-lg transition-colors ${!showSidebar ? 'bg-emerald-100 text-emerald-700' : 'text-gray-400 hover:text-emerald-600 hover:bg-gray-100'}`}
+                                   title="Toggle Sidebar"
+                                 >
+                                   <PanelLeft size={20} />
+                                 </button>
+
+                                 <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
+
+                                 {/* Insert Position Radios */}
+                                 <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                                   <span className="hidden sm:inline">Posisi Tambah:</span>
+                                   <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
+                                      <input type="radio" checked={insertMode === 'top'} onChange={() => setInsertMode('top')} className="text-[#059669] focus:ring-[#059669]" />
+                                      <ArrowUpToLine size={14} /> <span className="hidden sm:inline">Atas</span>
+                                   </label>
+                                   <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
+                                      <input type="radio" checked={insertMode === 'bottom'} onChange={() => setInsertMode('bottom')} className="text-[#059669] focus:ring-[#059669]" />
+                                      <ArrowDownToLine size={14} /> <span className="hidden sm:inline">Bawah</span>
+                                   </label>
+                                 </div>
+                               </div>
+
+                               {/* Preview Toggle (Desktop Only) */}
+                               <div className="hidden xl:block">
                                   <button 
-                                    onClick={() => setShowSidebar(!showSidebar)}
-                                    className={`p-2 rounded-lg transition-colors ${!showSidebar ? 'bg-emerald-100 text-emerald-700' : 'text-gray-400 hover:text-emerald-600 hover:bg-gray-100'}`}
-                                    title="Toggle Sidebar"
-                                  >
-                                    <PanelLeft size={20} />
-                                  </button>
-
-                                  <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
-
-                                  {/* Insert Position Radios */}
-                                  <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-wide">
-                                    <span className="hidden sm:inline">Posisi Tambah:</span>
-                                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
-                                       <input type="radio" checked={insertMode === 'top'} onChange={() => setInsertMode('top')} className="text-[#059669] focus:ring-[#059669]" />
-                                       <ArrowUpToLine size={14} /> <span className="hidden sm:inline">Atas</span>
-                                    </label>
-                                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#059669] transition-colors">
-                                       <input type="radio" checked={insertMode === 'bottom'} onChange={() => setInsertMode('bottom')} className="text-[#059669] focus:ring-[#059669]" />
-                                       <ArrowDownToLine size={14} /> <span className="hidden sm:inline">Bawah</span>
-                                    </label>
-                                  </div>
-                                </div>
-
-                                {/* Preview Toggle (Desktop Only) */}
-                                <div className="hidden xl:block">
-                                   <button 
-                                      onClick={() => setShowPreview(!showPreview)}
-                                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${!showPreview ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-emerald-600 hover:bg-gray-100'}`}
-                                      title={showPreview ? "Sembunyikan Preview" : "Tampilkan Preview"}
+                                     onClick={() => setShowPreview(!showPreview)}
+                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${!showPreview ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-emerald-600 hover:bg-gray-100'}`}
+                                     title={showPreview ? "Sembunyikan Preview" : "Tampilkan Preview"}
                                    >
                                       {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
                                       <span>{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
                                    </button>
-                                </div>
-                            </div>
+                               </div>
+                           </div>
 
-                            {/* Block Type Buttons */}
-                            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-                                <Button onClick={() => addBlock('link')} size="sm" className="bg-[#059669] hover:bg-[#047857] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><LinkIcon size={16} /> Link</Button>
-                                <Button onClick={() => addBlock('image_grid')} size="sm" className="bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><GridIcon size={16} /> Galeri</Button>
-                                <Button onClick={() => addBlock('text')} size="sm" className="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Type size={16} /> Teks</Button>
-                                <Button onClick={() => addBlock('divider')} size="sm" className="bg-[#115e59] hover:bg-[#134e4a] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Minus size={16} /> Garis</Button>
-                                <Button onClick={() => addBlock('social_embed')} size="sm" className="bg-[#005461] hover:bg-[#003d47] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Share2 size={16} /> Posisi Medsos</Button>
-                                <Button onClick={() => addBlock('youtube')} size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Youtube size={16} /> YouTube</Button>
-                                <Button onClick={() => addBlock('map')} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><MapPin size={16} /> Peta</Button>
-                            </div>
+                           {/* Block Type Buttons */}
+                           <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                               <Button onClick={() => addBlock('link')} size="sm" className="bg-[#059669] hover:bg-[#047857] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><LinkIcon size={16} /> Link</Button>
+                               <Button onClick={() => addBlock('image_grid')} size="sm" className="bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><GridIcon size={16} /> Galeri</Button>
+                               <Button onClick={() => addBlock('text')} size="sm" className="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Type size={16} /> Teks</Button>
+                               <Button onClick={() => addBlock('divider')} size="sm" className="bg-[#115e59] hover:bg-[#134e4a] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Minus size={16} /> Garis</Button>
+                               <Button onClick={() => addBlock('social_embed')} size="sm" className="bg-[#005461] hover:bg-[#003d47] text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Share2 size={16} /> Posisi Medsos</Button>
+                               <Button onClick={() => addBlock('youtube')} size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><Youtube size={16} /> YouTube</Button>
+                               <Button onClick={() => addBlock('map')} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold border-none shadow-md transition-transform active:scale-95 opacity-100"><MapPin size={16} /> Peta</Button>
+                           </div>
                          </div>
                       </div>
 
@@ -573,18 +596,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                   <button onClick={() => moveBlock(index, 'down')} disabled={index===blocks.length-1} className="p-1 hover:bg-white rounded disabled:opacity-30"><ArrowDown size={14}/></button>
                               </div>
                               <div className="group/add relative mr-2">
-    <button className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Sisipkan Konten Dibawah Ini">
-        <Plus size={14} />
-    </button>
-    {/* Dropdown Mini saat Hover */}
-    <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-xl border border-gray-100 p-1 hidden group-hover/add:block z-50">
-        <div className="text-[10px] font-bold text-gray-400 px-2 py-1 uppercase">Sisipkan:</div>
-        <button onClick={() => addBlock('link', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><LinkIcon size={12}/> Link</button>
-        <button onClick={() => addBlock('text', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><Type size={12}/> Teks</button>
-        <button onClick={() => addBlock('divider', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><Minus size={12}/> Garis</button>
-        <button onClick={() => addBlock('image_grid', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><GridIcon size={12}/> Galeri</button>
-    </div>
-</div>
+                                  <button className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Sisipkan Konten Dibawah Ini">
+                                      <Plus size={14} />
+                                  </button>
+                                  {/* Dropdown Mini saat Hover */}
+                                  <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-xl border border-gray-100 p-1 hidden group-hover/add:block z-50">
+                                      <div className="text-[10px] font-bold text-gray-400 px-2 py-1 uppercase">Sisipkan:</div>
+                                      <button onClick={() => addBlock('link', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><LinkIcon size={12}/> Link</button>
+                                      <button onClick={() => addBlock('text', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><Type size={12}/> Teks</button>
+                                      <button onClick={() => addBlock('divider', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><Minus size={12}/> Garis</button>
+                                      <button onClick={() => addBlock('image_grid', index)} className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 rounded flex items-center gap-2"><GridIcon size={12}/> Galeri</button>
+                                  </div>
+                              </div>
 
                               {/* AUDIENCE BADGES IN HEADER */}
                               {block.audience === 'teacher' && <span className="text-[10px] uppercase font-bold px-2 py-1 rounded border mr-2 bg-yellow-50 text-yellow-600 border-yellow-100 flex items-center gap-1"><School size={10} /> Guru</span>}
@@ -609,16 +632,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Users size={12} /> Target Audience:</span>
                                    <div className="flex flex-wrap items-center gap-4">
                                         <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
-                                           <input type="radio" checked={block.audience === 'all' || !block.audience} onChange={() => updateBlock(block.id, { audience: 'all' })} className="w-4 h-4 text-emerald-600 focus:ring-emerald-600 border-gray-300" />
-                                           <span className={`text-xs font-bold ${block.audience === 'all' || !block.audience ? 'text-gray-900' : 'text-gray-500'}`}>Semua</span>
+                                            <input type="radio" checked={block.audience === 'all' || !block.audience} onChange={() => updateBlock(block.id, { audience: 'all' })} className="w-4 h-4 text-emerald-600 focus:ring-emerald-600 border-gray-300" />
+                                            <span className={`text-xs font-bold ${block.audience === 'all' || !block.audience ? 'text-gray-900' : 'text-gray-500'}`}>Semua</span>
                                         </label>
                                         <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
-                                           <input type="radio" checked={block.audience === 'teacher'} onChange={() => updateBlock(block.id, { audience: 'teacher' })} className="w-4 h-4 text-yellow-500 focus:ring-yellow-500 border-gray-300" />
-                                           <span className={`text-xs font-bold ${block.audience === 'teacher' ? 'text-yellow-700' : 'text-gray-500'}`}>Guru</span>
+                                            <input type="radio" checked={block.audience === 'teacher'} onChange={() => updateBlock(block.id, { audience: 'teacher' })} className="w-4 h-4 text-yellow-500 focus:ring-yellow-500 border-gray-300" />
+                                            <span className={`text-xs font-bold ${block.audience === 'teacher' ? 'text-yellow-700' : 'text-gray-500'}`}>Guru</span>
                                         </label>
                                         <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
-                                           <input type="radio" checked={block.audience === 'student'} onChange={() => updateBlock(block.id, { audience: 'student' })} className="w-4 h-4 text-blue-600 focus:ring-blue-600 border-gray-300" />
-                                           <span className={`text-xs font-bold ${block.audience === 'student' ? 'text-blue-700' : 'text-gray-500'}`}>Siswa</span>
+                                            <input type="radio" checked={block.audience === 'student'} onChange={() => updateBlock(block.id, { audience: 'student' })} className="w-4 h-4 text-blue-600 focus:ring-blue-600 border-gray-300" />
+                                            <span className={`text-xs font-bold ${block.audience === 'student' ? 'text-blue-700' : 'text-gray-500'}`}>Siswa</span>
                                         </label>
                                    </div>
                                </div>
@@ -746,9 +769,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                    <div className="flex flex-col gap-1">
                                       <label className="text-[10px] font-bold text-gray-500 uppercase">Kolom</label>
                                       <div className="flex bg-white rounded border border-gray-200">
-                                         {[1,2,3,4].map(col => (
-                                            <button key={col} onClick={() => updateBlock(block.id, { columns: col })} className={`w-8 h-8 text-xs font-bold ${ (block as ImageGridBlock).columns === col ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'}`}>{col}x</button>
-                                         ))}
+                                       {[1,2,3,4].map(col => (
+                                          <button key={col} onClick={() => updateBlock(block.id, { columns: col })} className={`w-8 h-8 text-xs font-bold ${ (block as ImageGridBlock).columns === col ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'}`}>{col}x</button>
+                                       ))}
                                       </div>
                                    </div>
                                    <div className="flex flex-col gap-1">
@@ -967,7 +990,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <Input className="bg-white" type={showNewPassword ? "text" : "password"} label="Konfirmasi Password" placeholder="Ketik ulang password baru" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                                 {passwordError && <div className="flex items-center gap-2 text-xs text-red-600 font-medium bg-red-100 p-2 rounded"><AlertTriangle size={12} /> {passwordError}</div>}
                                 <div className="pt-2">
-                                  {/* 👇 UPDATE 4: Button Loading State */}
                                   <Button 
                                     variant="danger" 
                                     size="sm" 
