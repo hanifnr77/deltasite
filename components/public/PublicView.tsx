@@ -323,7 +323,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const runningTextBg = profile.runningTextType ? runningTextColors[profile.runningTextType] : 'bg-blue-600';
 
   return (
-    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-teal-800 text-slate-100 min-h-screen pb-12`}>
+    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 min-h-screen pb-12`}>
       
       <style>
         {`
@@ -355,9 +355,12 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
       )}
 
       {/* --- BACKGROUND ORNAMENTS (ALA SPMB) --- */}
-      <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] rounded-full bg-teal-600/30 blur-[100px] pointer-events-none"></div>
-      <div className="absolute top-[30%] right-[-30%] w-[800px] h-[800px] rounded-full bg-teal-700/30 blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-teal-600/20 blur-[80px] pointer-events-none"></div>
+      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `linear-gradient(#00B7B5 1px, transparent 1px), linear-gradient(90deg, #00B7B5 1px, transparent 1px)`, backgroundSize: '40px 40px' }}></div>
+        <div className="absolute top-[-15%] left-[-25%] w-[80%] h-[80%] rounded-full bg-emerald-500 opacity-20 blur-[100px] animate-float" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-cyan-400 opacity-20 blur-[120px] animate-float" style={{ animationDelay: '3s' }} />
+        <div className="absolute top-[20%] right-[-5%] w-64 h-64 rounded-full border-2 border-white/5 opacity-30 animate-spin" style={{ animationDuration: '20s' }}></div>
+        <div className="absolute bottom-[30%] left-[5%] w-24 h-24 border border-white/10 rounded-2xl rotate-45 opacity-40 animate-float" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-15 mix-blend-overlay"></div>
 
       <div className={`relative z-10 w-full max-w-lg flex flex-col items-center gap-6 pt-8 pb-12 px-6 ${isPreview ? 'scale-95 origin-top' : ''}`}>
         
