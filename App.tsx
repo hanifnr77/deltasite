@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAllData, saveAllData } from './services/storageService';
-import { Block, UserProfile, SocialLinkItem } from './types';
+import { Block, UserProfile, SocialLinkItem, LinkBlock } from './types';
 import { PublicView } from './components/public/PublicView';
 import { AdminView } from './components/admin/AdminView';
 import { LoginView } from './components/admin/LoginView';
 import { Settings, ExternalLink } from 'lucide-react';
 import { ToastProvider, useToast } from './components/ui/Toast';
-// 👇 IMPORT BARU: Ambil AuthProvider dan useAuth
 import { AuthProvider, useAuth } from './context/AuthContext'; 
 
 // Internal component yang menggunakan Logic Auth
 const AppContent: React.FC = () => {
   const [view, setView] = useState<'public' | 'admin'>('public');
   
-  // 👇 UPDATE: Gunakan useAuth() menggantikan useState(false) manual
   const { isAuthenticated, logout } = useAuth(); 
   const { addToast } = useToast();
   
@@ -47,22 +45,43 @@ const AppContent: React.FC = () => {
   }, []);
 
   // Centralized Save Function
-  const persistData = async (newBlocks: Block[], newProfile: UserProfile, newSocials: SocialLinkItem[]) => {
+  const persistData = async (newBlocks: Block[], newProfile: UserProfile, newSocials: SocialLinkItem[], silent = false) => {
     // Optimistic UI Update
     setBlocks(newBlocks);
     setProfile(newProfile);
     setSocials(newSocials);
 
     // Background Save
-    setIsSaving(true);
+    if (!silent) setIsSaving(true);
     try {
       await saveAllData(newBlocks, newProfile, newSocials);
     } catch (err) {
       console.error("Save failed", err);
-      addToast("Gagal menyimpan perubahan", "error");
+      if (!silent) addToast("Gagal menyimpan perubahan", "error");
     } finally {
-      setIsSaving(false);
+      if (!silent) setIsSaving(false);
     }
+  };
+
+  // --- CLICK TRACKING LOGIC ---
+  const handleBlockClick = (blockId: string) => {
+    // Cari dan update block yang diklik
+    const newBlocks = blocks.map(block => {
+      if (block.id === blockId && block.type === 'link') {
+        const linkBlock = block as LinkBlock;
+        return { ...linkBlock, clicks: (linkBlock.clicks || 0) + 1 };
+      }
+      return block;
+    });
+
+    // Update state lokal segera (agar UI Admin langsung update jika dibuka)
+    setBlocks(newBlocks);
+
+    // Simpan ke database secara 'silent' (tanpa loading indicator yang mengganggu user)
+    // Kita panggil saveAllData langsung bypass persistData agar kontrol UI lebih spesifik
+    saveAllData(newBlocks, profile, socials).catch(err => {
+      console.error("Failed to save click stat", err);
+    });
   };
 
   const handleUpdateBlocks = (newBlocks: Block[]) => {
@@ -78,7 +97,7 @@ const AppContent: React.FC = () => {
   }
 
   const handleLogout = () => {
-    logout(); // 👇 Panggil fungsi logout dari Context
+    logout(); 
     setView('public');
     addToast("Berhasil keluar", "info");
   }
@@ -102,12 +121,17 @@ const AppContent: React.FC = () => {
 
   const renderContent = () => {
     if (isPublic) {
-      return <PublicView blocks={blocks} profile={profile} socials={socials} />;
+      return (
+        <PublicView 
+          blocks={blocks} 
+          profile={profile} 
+          socials={socials} 
+          onBlockClick={handleBlockClick} // Pass fungsi tracking
+        />
+      );
     }
 
     if (isLoginView) {
-      // 👇 UPDATE: LoginView sekarang menangani logic sendiri via Context
-      // Kita tidak perlu lagi mengoper 'expectedPassword' atau 'onLogin' manual
       return <LoginView />;
     }
 
@@ -186,7 +210,6 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ToastProvider>
-      {/* 👇 PENTING: AuthProvider membungkus seluruh aplikasi */}
       <AuthProvider>
         <AppContent />
       </AuthProvider>
