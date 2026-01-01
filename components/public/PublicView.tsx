@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, UserProfile, SocialLinkItem, YoutubeBlock, MapBlock } from '../../types';
 import { ExternalLink, CheckCircle, AlertCircle, Users, GraduationCap, School, Megaphone, Clock, Calendar } from 'lucide-react';
 import { IconMapper } from '../ui/IconMapper';
+
 // Fungsi Pintar: Hitung Kontras Warna (Hitam/Putih)
 const getContrastColor = (hexColor: string) => {
   if (!hexColor || hexColor[0] !== '#') return '#ffffff';
@@ -20,9 +21,10 @@ interface PublicViewProps {
   profile: UserProfile;
   socials: SocialLinkItem[];
   isPreview?: boolean;
+  onBlockClick?: (id: string) => void; // Tambahan prop untuk tracking
 }
 
-export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false }) => {
+export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false, onBlockClick }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'student'>('all');
    
   // Prayer Times State
@@ -77,34 +79,28 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     setNextPrayer('Fajr');
   };
 
-  const handleLinkClick = (e: React.MouseEvent) => {
+  const handleLinkClick = (e: React.MouseEvent, id?: string) => {
     if (isPreview) {
       e.preventDefault();
+      return;
+    }
+    // Jika ada ID (dari LinkBlock), panggil fungsi tracking
+    if (id && onBlockClick) {
+      onBlockClick(id);
     }
   };
 
   const interactionClass = isPreview ? 'pointer-events-none' : 'cursor-pointer';
 
-  // --- Filter Logic (PERBAIKAN DI SINI) ---
+  // --- Filter Logic ---
   const filteredBlocks = blocks.filter(block => {
-    // 1. Cek Link Aktif
     if (block.type === 'link' && !(block as LinkBlock).active) return false;
-    
-    // 2. Cek Audience
     const blockAudience = block.audience || 'all';
 
-    // Logika STRICT (Eksklusif)
-    if (activeTab === 'all') {
-        return blockAudience === 'all';
-    }
-    if (activeTab === 'teacher') {
-        return blockAudience === 'teacher'; // HANYA Guru
-    }
-    if (activeTab === 'student') {
-        return blockAudience === 'student'; // HANYA Siswa
-    }
-    
-    return false;
+    if (activeTab === 'all') return blockAudience === 'all';
+    if (activeTab === 'teacher') return blockAudience === 'all' || blockAudience === 'teacher';
+    if (activeTab === 'student') return blockAudience === 'all' || blockAudience === 'student';
+    return true;
   });
 
   // --- Helper to convert YouTube URL to Embed URL ---
@@ -160,7 +156,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             href={social.url}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={handleLinkClick}
+            onClick={(e) => handleLinkClick(e)}
             className={`p-3 bg-white/5 backdrop-blur-md rounded-full shadow-lg border border-white/10 text-white hover:scale-110 hover:bg-[#00B7B5] hover:text-[#005461] hover:shadow-[0_0_15px_rgba(0,183,181,0.5)] transition-all duration-300 ${interactionClass}`}
           >
             <IconMapper platform={social.platform} size={22} />
@@ -173,8 +169,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const renderLink = (link: LinkBlock) => {
     const isImageMode = link.displayMode === 'image' && !!link.image;
     const hasCustomColor = !!link.customColor;
-    // 👇 LOGIKA WARNA PINTAR
-    const bgColor = link.customColor || '#059669'; // Default Emerald
+    const bgColor = link.customColor || '#059669'; 
     const textColor = hasCustomColor ? getContrastColor(bgColor) : '#ffffff'; 
     const containerStyle: React.CSSProperties = hasCustomColor 
       ? { backgroundColor: bgColor, borderColor: 'rgba(0,0,0,0.1)', color: textColor } 
@@ -188,7 +183,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={handleLinkClick}
+        onClick={(e) => handleLinkClick(e, link.id)} // Pass Link ID here
         className={`group block w-full transform transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] ${interactionClass}`}
       >
         <div 
@@ -283,7 +278,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             </div>
           );
           if (item.linkUrl) {
-            return ( <a key={item.id} href={item.linkUrl} target="_blank" rel="noopener noreferrer" onClick={handleLinkClick} className={`block hover:opacity-90 transition-opacity ${interactionClass}`}><Content /></a> );
+            return ( <a key={item.id} href={item.linkUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => handleLinkClick(e)} className={`block hover:opacity-90 transition-opacity ${interactionClass}`}><Content /></a> );
           }
           return <div key={item.id}><Content /></div>;
         })}
@@ -333,7 +328,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const runningTextBg = profile.runningTextType ? runningTextColors[profile.runningTextType] : 'bg-blue-600';
 
   return (
-    div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 min-h-screen pb-12`}>
+    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 min-h-screen pb-12`}>
       
       {/* Keyframes for Marquee */}
       <style>
