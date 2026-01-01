@@ -65,7 +65,9 @@ const AppContent: React.FC = () => {
 
   // --- CLICK TRACKING LOGIC ---
   const handleBlockClick = (blockId: string) => {
-    // Cari dan update block yang diklik
+    // Jangan hitung jika sedang di mode Admin (biar data admin gak nambahin statistik)
+    if (isAuthenticated) return;
+    
     const newBlocks = blocks.map(block => {
       if (block.id === blockId && block.type === 'link') {
         const linkBlock = block as LinkBlock;
