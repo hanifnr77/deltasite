@@ -3,28 +3,24 @@ import { Block, LinkBlock, TextBlock, DividerBlock, ImageGridBlock, UserProfile,
 import { ExternalLink, CheckCircle, AlertCircle, Users, GraduationCap, School, Megaphone, Clock, Calendar } from 'lucide-react';
 import { IconMapper } from '../ui/IconMapper';
 
-// Fungsi Pintar: Hitung Kontras Warna (Hitam/Putih)
-const getContrastColor = (hexColor: string) => {
-  if (!hexColor || hexColor[0] !== '#') return '#ffffff';
-  // Konversi Hex ke RGB
-  const r = parseInt(hexColor.substr(1, 2), 16);
-  const g = parseInt(hexColor.substr(3, 2), 16);
-  const b = parseInt(hexColor.substr(5, 2), 16);
-  // Rumus YIQ (standar mata manusia)
-  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  // Jika cerah (>128) pakai hitam, jika gelap pakai putih
-  return (yiq >= 128) ? '#0f172a' : '#ffffff';
-}
-
 interface PublicViewProps {
   blocks: Block[];
   profile: UserProfile;
   socials: SocialLinkItem[];
   isPreview?: boolean;
-  onBlockClick?: (id: string) => void; // Tambahan prop untuk tracking
 }
 
-export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false, onBlockClick }) => {
+// Fungsi Pintar: Hitung Kontras Warna (Hitam/Putih)
+const getContrastColor = (hexColor: string) => {
+  if (!hexColor || hexColor[0] !== '#') return '#ffffff';
+  const r = parseInt(hexColor.substr(1, 2), 16);
+  const g = parseInt(hexColor.substr(3, 2), 16);
+  const b = parseInt(hexColor.substr(5, 2), 16);
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return (yiq >= 128) ? '#0f172a' : '#ffffff';
+}
+
+export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'student'>('all');
    
   // Prayer Times State
@@ -35,10 +31,8 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const activeSocials = socials.filter(s => s.active && s.url);
   const currentYear = new Date().getFullYear();
    
-  // Backward Compatibility:
   const hasSocialEmbedBlock = blocks.some(b => b.type === 'social_embed');
 
-  // --- Fetch Prayer Times ---
   useEffect(() => {
     const fetchPrayerTimes = async () => {
       try {
@@ -61,7 +55,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const determineNextPrayer = (timings: any) => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
     const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
     
     for (const prayer of prayers) {
@@ -79,31 +72,36 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     setNextPrayer('Fajr');
   };
 
-  const handleLinkClick = (e: React.MouseEvent, id?: string) => {
+  const handleLinkClick = (e: React.MouseEvent) => {
     if (isPreview) {
       e.preventDefault();
-      return;
-    }
-    // Jika ada ID (dari LinkBlock), panggil fungsi tracking
-    if (id && onBlockClick) {
-      onBlockClick(id);
     }
   };
 
   const interactionClass = isPreview ? 'pointer-events-none' : 'cursor-pointer';
 
-  // --- Filter Logic ---
+  // --- STRICT FILTER LOGIC ---
   const filteredBlocks = blocks.filter(block => {
+    // 1. Cek Link Aktif
     if (block.type === 'link' && !(block as LinkBlock).active) return false;
+    
+    // 2. Cek Audience
     const blockAudience = block.audience || 'all';
 
-    if (activeTab === 'all') return blockAudience === 'all';
-    if (activeTab === 'teacher') return blockAudience === 'all' || blockAudience === 'teacher';
-    if (activeTab === 'student') return blockAudience === 'all' || blockAudience === 'student';
-    return true;
+    // Logika STRICT (Eksklusif)
+    if (activeTab === 'all') {
+        return blockAudience === 'all';
+    }
+    if (activeTab === 'teacher') {
+        return blockAudience === 'teacher'; // HANYA Guru
+    }
+    if (activeTab === 'student') {
+        return blockAudience === 'student'; // HANYA Siswa
+    }
+    
+    return false;
   });
 
-  // --- Helper to convert YouTube URL to Embed URL ---
   const getYoutubeEmbedUrl = (urlStr: string) => {
     if (!urlStr) return null;
     let videoId = '';
@@ -144,8 +142,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     return null;
   };
 
-  // --- Render Helpers ---
-
   const renderSocials = () => {
     if (activeSocials.length === 0) return null;
     return (
@@ -156,7 +152,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             href={social.url}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => handleLinkClick(e)}
+            onClick={handleLinkClick}
             className={`p-3 bg-white/5 backdrop-blur-md rounded-full shadow-lg border border-white/10 text-white hover:scale-110 hover:bg-[#00B7B5] hover:text-[#005461] hover:shadow-[0_0_15px_rgba(0,183,181,0.5)] transition-all duration-300 ${interactionClass}`}
           >
             <IconMapper platform={social.platform} size={22} />
@@ -169,8 +165,10 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const renderLink = (link: LinkBlock) => {
     const isImageMode = link.displayMode === 'image' && !!link.image;
     const hasCustomColor = !!link.customColor;
+    
     const bgColor = link.customColor || '#059669'; 
     const textColor = hasCustomColor ? getContrastColor(bgColor) : '#ffffff'; 
+    
     const containerStyle: React.CSSProperties = hasCustomColor 
       ? { backgroundColor: bgColor, borderColor: 'rgba(0,0,0,0.1)', color: textColor } 
       : {}; 
@@ -183,11 +181,11 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(e) => handleLinkClick(e, link.id)} // Pass Link ID here
+        onClick={handleLinkClick}
         className={`group block w-full transform transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] ${interactionClass}`}
       >
         <div 
-          className={`relative flex items-stretch rounded-2xl transition-all duration-300 overflow-hidden ${isGlass ? 'bg-white/10 backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/15' : 'shadow-md hover:shadow-xl'}`}
+          className={`relative flex items-stretch rounded-2xl transition-all duration-300 overflow-hidden ${isGlass ? 'bg-white/10 backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/15 hover:border-[#00B7B5]/50 hover:shadow-[0_0_20px_rgba(0,183,181,0.25)]' : 'shadow-md hover:shadow-xl'}`}
           style={containerStyle}
         >
           {isImageMode ? (
@@ -197,22 +195,20 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             </div>
           ) : (
             <div className="pl-4 py-4 flex items-center justify-center">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner transition-all duration-300 shrink-0 ${isGlass ? 'bg-[#005461]/40 text-[#00B7B5]' : 'bg-black/10'}`} style={!isGlass ? { color: textColor } : {}}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner transition-all duration-300 shrink-0 ${isGlass ? 'bg-[#005461]/40 text-[#00B7B5] group-hover:bg-[#00B7B5] group-hover:text-[#005461]' : 'bg-black/10'}`} style={!isGlass ? { color: textColor } : {}}>
                   <ExternalLink size={20} />
                 </div>
             </div>
           )}
 
           <div className={`flex-1 flex flex-col justify-center min-w-0 py-3 ${isImageMode ? 'px-4' : 'px-4'}`}>
-            <span className={`font-heading font-bold text-sm md:text-base leading-tight transition-colors shadow-black/10 drop-shadow-sm ${isGlass ? 'text-white group-hover:text-[#00B7B5]' : ''}`} style={!isGlass ? { color: textColor } : {}}>
-                {link.title}
-            </span>
-            {link.subtitle && <span className={`text-xs font-medium mt-1 line-clamp-2 ${isGlass ? 'text-slate-300' : 'opacity-80'}`} style={!isGlass ? { color: textColor } : {}}>{link.subtitle}</span>}
-            {!isImageMode && link.category && <span className={`text-[10px] uppercase font-bold tracking-wide mt-1.5 ${isGlass ? 'text-slate-400' : 'opacity-60'}`} style={!isGlass ? { color: textColor } : {}}>{link.category}</span>}
+            <span className={`font-heading font-bold text-sm md:text-base leading-tight transition-colors shadow-black/10 drop-shadow-sm ${isGlass ? 'text-white group-hover:text-[#00B7B5]' : ''}`} style={!isGlass ? { color: textColor } : {}}>{link.title}</span>
+            {link.subtitle && <span className={`text-xs font-medium mt-1 line-clamp-2 ${isGlass ? 'text-slate-300 group-hover:text-white/90' : 'opacity-80'}`} style={!isGlass ? { color: textColor } : {}}>{link.subtitle}</span>}
+            {!isImageMode && link.category && <span className={`text-[10px] uppercase font-bold tracking-wide mt-1.5 ${isGlass ? 'text-slate-400 group-hover:text-[#00B7B5]/80' : 'opacity-60'}`} style={!isGlass ? { color: textColor } : {}}>{link.category}</span>}
           </div>
           
           <div className="pr-4 py-4 flex items-center justify-center">
-            <div className={`w-8 h-8 flex items-center justify-center rounded-full transition-all shrink-0 ${isGlass ? 'bg-white/5 text-slate-400' : 'bg-black/5'}`} style={!isGlass ? { color: textColor } : {}}>
+            <div className={`w-8 h-8 flex items-center justify-center rounded-full transition-all shrink-0 ${isGlass ? 'bg-white/5 text-slate-400 group-hover:bg-[#00B7B5] group-hover:text-[#005461]' : 'bg-black/5'}`} style={!isGlass ? { color: textColor } : {}}>
               <ExternalLink size={14} />
             </div>
           </div>
@@ -278,7 +274,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
             </div>
           );
           if (item.linkUrl) {
-            return ( <a key={item.id} href={item.linkUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => handleLinkClick(e)} className={`block hover:opacity-90 transition-opacity ${interactionClass}`}><Content /></a> );
+            return ( <a key={item.id} href={item.linkUrl} target="_blank" rel="noopener noreferrer" onClick={handleLinkClick} className={`block hover:opacity-90 transition-opacity ${interactionClass}`}><Content /></a> );
           }
           return <div key={item.id}><Content /></div>;
         })}
@@ -319,7 +315,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     );
   };
 
-  // --- RUNNING TEXT STYLES ---
   const runningTextColors = {
     info: 'bg-blue-600',
     warning: 'bg-amber-500',
@@ -328,9 +323,8 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
   const runningTextBg = profile.runningTextType ? runningTextColors[profile.runningTextType] : 'bg-blue-600';
 
   return (
-    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-gradient-to-br from-[#005461] to-[#018790] text-slate-100 min-h-screen pb-12`}>
+    <div className={`w-full relative flex flex-col items-center overflow-x-hidden bg-teal-800 text-slate-100 min-h-screen pb-12`}>
       
-      {/* Keyframes for Marquee */}
       <style>
         {`
           @keyframes marquee {
@@ -345,7 +339,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         `}
       </style>
 
-      {/* --- STICKY RUNNING TEXT --- */}
       {profile.runningTextActive && profile.runningText && (
         <div className={`w-full sticky top-0 z-50 ${runningTextBg} shadow-lg border-b border-white/10 overflow-hidden`}>
           <div className="max-w-md mx-auto relative flex items-center h-8">
@@ -361,20 +354,13 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         </div>
       )}
 
-      {/* --- BACKGROUND ORNAMENTS & SHAPES --- */}
-      <div className={`${isPreview ? 'absolute' : 'fixed'} inset-0 z-0 overflow-hidden pointer-events-none`}>
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `linear-gradient(#00B7B5 1px, transparent 1px), linear-gradient(90deg, #00B7B5 1px, transparent 1px)`, backgroundSize: '40px 40px' }}></div>
-        <div className="absolute top-[-15%] left-[-25%] w-[80%] h-[80%] rounded-full bg-emerald-500 opacity-20 blur-[100px] animate-float" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-cyan-400 opacity-20 blur-[120px] animate-float" style={{ animationDelay: '3s' }} />
-        <div className="absolute top-[20%] right-[-5%] w-64 h-64 rounded-full border-2 border-white/5 opacity-30 animate-spin" style={{ animationDuration: '20s' }}></div>
-        <div className="absolute bottom-[30%] left-[5%] w-24 h-24 border border-white/10 rounded-2xl rotate-45 opacity-40 animate-float" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-15 mix-blend-overlay"></div>
-      </div>
+      {/* --- BACKGROUND ORNAMENTS (ALA SPMB) --- */}
+      <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] rounded-full bg-teal-600/30 blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-[30%] right-[-30%] w-[800px] h-[800px] rounded-full bg-teal-700/30 blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-teal-600/20 blur-[80px] pointer-events-none"></div>
 
-      {/* Main Content */}
       <div className={`relative z-10 w-full max-w-lg flex flex-col items-center gap-6 pt-8 pb-12 px-6 ${isPreview ? 'scale-95 origin-top' : ''}`}>
         
-        {/* Profile Header */}
         <div className="flex flex-col items-center text-center gap-5 w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl animate-fade-in ring-1 ring-white/5">
           <div className="relative group">
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#00B7B5] to-[#018790] blur-xl opacity-40 group-hover:opacity-60 transition-duration-500 scale-110 animate-pulse"></div>
@@ -403,7 +389,6 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
           </div>
         </div>
 
-        {/* --- PRAYER TIMES WIDGET --- */}
         <div className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-lg animate-fade-in">
            <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
               <div className="flex items-center gap-2 text-slate-300">
@@ -432,9 +417,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
            </div>
         </div>
 
-        {/* AUDIENCE FILTER TABS */}
         <div className="w-full max-w-sm mx-auto animate-fade-in relative z-20 flex flex-col items-center">
-          {/* Label Petunjuk */}
           <div className="flex items-center gap-2 mb-3">
              <div className="h-px w-6 bg-gradient-to-r from-transparent to-white/40"></div>
              <p className="text-[10px] font-bold text-white/80 uppercase tracking-[0.2em]">
@@ -477,10 +460,8 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
           </div>
         </div>
 
-        {/* Social Links */}
         {!hasSocialEmbedBlock && activeSocials.length > 0 && renderSocials()}
 
-        {/* Blocks */}
         <div className="w-full space-y-4 mt-2">
           {filteredBlocks.map((block, idx) => {
             return (
