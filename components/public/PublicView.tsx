@@ -73,9 +73,14 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
     setNextPrayer('Fajr');
   };
 
-  const handleLinkClick = (e: React.MouseEvent) => {
+  const handleLinkClick = (e: React.MouseEvent, blockId?: string) => {
     if (isPreview) {
-      e.preventDefault();
+      e.preventDefault(); // Kalau mode preview, jangan buka link
+    } else {
+      // Kalau mode asli (Public), catat kliknya!
+      if (blockId && onBlockClick) {
+        onBlockClick(blockId);
+      }
     }
   };
 
@@ -182,7 +187,7 @@ export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={handleLinkClick}
+        onClick={(e) => handleLinkClick(e, link.id)}
         className={`group block w-full transform transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] ${interactionClass}`}
       >
         <div 
