@@ -66,10 +66,12 @@ const AppContent: React.FC = () => {
   // --- CLICK TRACKING LOGIC ---
   const handleBlockClick = (blockId: string) => {
     // Jangan hitung jika sedang di mode Admin (biar data admin gak nambahin statistik)
-    if (isAuthenticated) return;
+   // if (isAuthenticated) return; //
+    console.log("🔥 Laporan diterima di Pusat! ID:", blockId);
     
     const newBlocks = blocks.map(block => {
       if (block.id === blockId && block.type === 'link') {
+        console.log("✅ Menambahkan angka untuk:", block.title);
         const linkBlock = block as LinkBlock;
         return { ...linkBlock, clicks: (linkBlock.clicks || 0) + 1 };
       }
