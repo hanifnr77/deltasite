@@ -21,7 +21,7 @@ const getContrastColor = (hexColor: string) => {
   return (yiq >= 128) ? '#0f172a' : '#ffffff';
 }
 
-export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false }) => {
+export const PublicView: React.FC<PublicViewProps> = ({ blocks, profile, socials, isPreview = false, onBlockClick }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'student'>('all');
    
   // Prayer Times State
